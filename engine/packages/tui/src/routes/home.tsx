@@ -1,6 +1,7 @@
 import { Prompt, type PromptRef } from "../component/prompt"
 import { createEffect, createMemo, createSignal, onMount, Show, untrack } from "solid-js"
-import { Crew } from "../component/crew"
+import { HomeCrewStrip } from "../component/crew"
+import { HOME_ROWS } from "../ui/home-crew"
 import { Logo } from "../component/logo"
 import { useArgs } from "../context/args"
 import { useRouteData } from "../context/route"
@@ -96,14 +97,17 @@ export function Home() {
           </text>
           <box height={1} flexShrink={0} />
         </Show>
-        <Show when={dimensions().height >= 34}>
-          <Crew width={Math.min(75, dimensions().width - 4)} />
-        </Show>
         <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1} flexShrink={0} position="relative">
           <Prompt ref={bind} placeholders={placeholder} disabled={forms().length > 0} />
         </box>
         <box flexGrow={1} minHeight={0} />
       </box>
+      {/* DataForSEO Agent: the crew wanders the floor above the footer; point at them or click one. */}
+      <Show when={dimensions().height >= 16 + HOME_ROWS && dimensions().width >= 40}>
+        <box width="100%" height={HOME_ROWS} flexShrink={0} paddingLeft={2} paddingRight={2}>
+          <HomeCrewStrip width={dimensions().width - 4} />
+        </box>
+      </Show>
       <box width="100%" flexShrink={0}>
         <Slot path="home.footer" />
       </box>

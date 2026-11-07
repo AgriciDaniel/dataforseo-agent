@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { markText } from "../../src/logo"
 import { RGBA, TextAttributes, type ScrollbackWriter } from "@opentui/core"
 import { createTestRenderer } from "@opentui/core/testing"
 import { entrySplash, entrySplashLayout, exitSplash } from "../../src/mini/splash"
@@ -183,7 +184,7 @@ test.each(
     .join("")
   expect(reconstructed).toBe(command)
   if (input.width >= 80) {
-    expect(result.rows[1].startsWith(input.mono ? "[D]" : "   ▄▄ ██")).toBe(true)
+    expect(result.rows[1].startsWith(input.mono ? "[D]" : markText()[0].trimEnd())).toBe(true)
     expect(result.rows[1].includes("Session  Review mini layout")).toBe(input.showSession)
     expect(result.rows[2]).toContain("Continue " + command)
   } else {

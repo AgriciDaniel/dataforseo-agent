@@ -67,7 +67,7 @@ import { DialogSelect } from "../../ui/dialog-select"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
 import { TodoItem } from "../../component/todo-item"
 import { ChartView } from "../../component/chart-view"
-import { CrewStrip } from "../../component/crew"
+import { chatAutoAllowed, isDataForSEOAction } from "../../util/chat-auto-allow"
 import type { Spec as ChartSpec } from "@dataforseo-agent/util/chart"
 import { DialogImagePreview } from "../../component/dialog-image-preview"
 import { createMediaSource } from "../../component/media-source"
@@ -151,8 +151,6 @@ export function Session(props: {
   scrollRef?: (scroll: ScrollBoxRenderable | undefined) => void
   verticalTabsWidth: number
   promptMuted?: boolean
-  sidebarVisible: boolean
-  onToggleSidebar: () => void
   terminals?: boolean
   visibleTerminalID?: string
   onTerminalPicker?: (show: (() => void) | undefined) => void
@@ -210,7 +208,12 @@ export function Session(props: {
       (sessionID) => data.session.permission.list(sessionID) ?? [],
     )
   })
-  const promptedPermissions = createMemo(() => (local.permission.mode === "autoaccept" ? [] : permissions()))
+  // DataForSEO Agent: "Allow all in this chat" answers this chat's DataForSEO requests without a prompt.
+  const chatAllowed = (request: { action: string }) =>
+    isDataForSEOAction(request.action) && chatAutoAllowed(route.sessionID)
+  const promptedPermissions = createMemo(() =>
+    local.permission.mode === "autoaccept" ? [] : permissions().filter((request) => !chatAllowed(request)),
+  )
   const forms = createMemo(() => {
     const global = data.session.form.list("global", location()) ?? []
     if (session()?.parentID) return global
@@ -253,11 +256,6 @@ export function Session(props: {
   const groupedKind = (kind: GroupKind) =>
     kind === "reasoning" ? thinkingMode() === "hide" : kind === "exploration" ? groupExploration() : true
 
-  Keymap.createLayer(() => ({
-    priority: 10,
-    enabled: () => props.sidebarVisible && dimensions().width - props.verticalTabsWidth <= 120 && !disabled(),
-    commands: [{ bind: "escape,ctrl+c", title: "Close sidebar", group: "Session", run: props.onToggleSidebar }],
-  }))
   const contentWidth = createMemo(() => (props.width ?? dimensions().width - props.verticalTabsWidth) - 4)
   const models = createMemo(() => data.location.model.list(location()) ?? [])
 
@@ -267,8 +265,9 @@ export function Session(props: {
   const client = useClient()
   const autoApproved = new Set<string>()
   createEffect(() => {
-    if (local.permission.mode !== "autoaccept") return
+    const all = local.permission.mode === "autoaccept"
     permissions().forEach((request) => {
+      if (!all && !chatAllowed(request)) return
       if (autoApproved.has(request.id)) return
       autoApproved.add(request.id)
       void data.session.permission
@@ -1487,16 +1486,6 @@ export function Session(props: {
                 terminals={props.terminals}
                 visibleTerminalID={props.visibleTerminalID}
               />
-              {/* DataForSEO Agent: the crew acts out what the busy session is doing, just above the prompt. */}
-              <Show when={!composer.open && !session()?.parentID}>
-                <CrewStrip
-                  status={data.session.status(route.sessionID)}
-                  permissions={promptedPermissions().length}
-                  messages={messages()}
-                  animate={config.animations ?? true}
-                  width={Math.min(56, contentWidth())}
-                />
-              </Show>
               <Switch>
                 <Match when={composer.open || (!!session()?.parentID && forms().length === 0)}>{null}</Match>
                 <Match when={promptedPermissions().length > 0}>
@@ -3177,7 +3166,7 @@ function Subagent(props: ToolProps) {
         ) : undefined
       }
     >
-      {`${continuation() ? "Continue subagent" : `${Locale.titlecase(stringValue(props.input.agent) ?? stringValue(props.input.subagent_type) ?? "General")} Subagent`} — ${description() ?? "Subagent"}${model() ? ` · ${model()}` : ""}`}
+      {`${continuation() ? "Continue subagent" : `${Locale.titlecase(stringValue(props.input.agent) ?? stringValue(props.input.subagent_type) ?? "General")} Subagent`}: ${description() ?? "Subagent"}${model() ? ` · ${model()}` : ""}`}
     </InlineTool>
   )
 }

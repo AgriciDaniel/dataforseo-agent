@@ -17,6 +17,9 @@ export function PromptMetadataRow(props: {
   agentAlpha: number
   modelAlpha: number
   variantAlpha: number
+  /** Clicking the agent or the model opens its dropdown. */
+  onAgent?: () => void
+  onModel?: () => void
 }) {
   const theme = useTheme()
   const dimensions = useTerminalDimensions()
@@ -40,13 +43,17 @@ export function PromptMetadataRow(props: {
         fallback={<box height={1} />}
       >
         <Show when={layout().agent}>
-          {(agent) => <text fg={fade(props.highlight, props.agentAlpha)}>{agent()}</text>}
+          {(agent) => (
+            <text id="prompt-meta-agent" fg={fade(props.highlight, props.agentAlpha)} onMouseUp={() => props.onAgent?.()}>
+              {agent()}
+            </text>
+          )}
         </Show>
         <Show when={props.mode === "normal" && layout().auto}>
           <text fg={fade(theme.text.muted, props.agentAlpha)}>auto</text>
         </Show>
         <Show when={props.mode === "normal" && layout().model}>
-          <box flexDirection="row" gap={1} flexGrow={1} flexShrink={1} minWidth={0}>
+          <box id="prompt-meta-model" flexDirection="row" gap={1} flexGrow={1} flexShrink={1} minWidth={0} onMouseUp={() => props.onModel?.()}>
             <Show when={layout().agent}>
               <text fg={fade(theme.text.muted, props.modelAlpha)}>·</text>
             </Show>
@@ -66,6 +73,7 @@ export function PromptMetadataRow(props: {
                 </text>
               )}
             </Show>
+
             <Show when={layout().variant}>
               {(variant) => (
                 <>

@@ -13,6 +13,7 @@ import { LocationProvider } from "../../../src/context/location"
 import { ThemeProvider } from "../../../src/context/theme"
 import { FormPrompt, FORM_MODE } from "../../../src/routes/session/form"
 import { PermissionPrompt } from "../../../src/routes/session/permission"
+import { chatAutoAllowed, setChatAutoAllowed } from "../../../src/util/chat-auto-allow"
 import { DialogProvider } from "../../../src/ui/dialog"
 import { ToastProvider } from "../../../src/ui/toast"
 import { emptyThemeSource, tmpdir } from "../../fixture/fixture"
@@ -94,7 +95,7 @@ async function mountPanes(root: string, render: () => JSX.Element, parentID?: st
         </ConfigProvider>
       </TestTuiContexts>
     ),
-    { width: 90, height: 24, kittyKeyboard: true },
+    { width: 110, height: 24, kittyKeyboard: true },
   )
   app.renderer.start()
   await ready.promise
@@ -276,6 +277,64 @@ test("permission rejection text keeps its draft and regains focus when its scope
     panes.app.mockInput.pressEnter()
     await panes.app.waitFor(() => panes.replies.length === 1)
     expect(panes.replies).toEqual([{ decision: "reject", message: "choose another command" }])
+  } finally {
+    panes.app.renderer.destroy()
+  }
+})
+
+// DataForSEO Agent: paid DataForSEO calls get Accept, Allow all in this chat, and Deny, with the bots pointing.
+const paidRequest = {
+  id: "per_paid",
+  sessionID: "ses_scoped",
+  action: "dataforseo_api_request",
+  resources: ["/v3/dataforseo_labs/google/keyword_ideas/live"],
+  save: ["/v3/dataforseo_labs/google/keyword_ideas/live"],
+} satisfies PermissionRequest
+
+test("a paid DataForSEO call shows Accept, Allow all in this chat and Deny, and y accepts", async () => {
+  await using tmp = await tmpdir()
+  const panes = await mountPanes(tmp.path, () => <PermissionPrompt request={paidRequest} />)
+  try {
+    panes.setActive(true)
+    await panes.app.renderOnce()
+    const frame = panes.app.captureCharFrame()
+    console.log(frame.split("\n").slice(0, 13).join("\n"))
+    expect(frame).toContain("Accept")
+    expect(frame).toContain("Allow all in chat")
+    expect(frame).toContain("Always this endpoint")
+    expect(frame).toContain("Deny")
+    panes.app.mockInput.pressKey("y")
+    await panes.app.waitFor(() => panes.replies.length === 1)
+    expect(panes.replies).toEqual([{ decision: "once" }])
+  } finally {
+    panes.app.renderer.destroy()
+  }
+})
+
+test("Allow all in this chat accepts this call and turns on auto-allow for the chat", async () => {
+  await using tmp = await tmpdir()
+  setChatAutoAllowed("ses_scoped", false)
+  const panes = await mountPanes(tmp.path, () => <PermissionPrompt request={paidRequest} />)
+  try {
+    panes.setActive(true)
+    panes.app.mockInput.pressKey("a")
+    await panes.app.waitFor(() => panes.replies.length === 1)
+    expect(panes.replies).toEqual([{ decision: "once" }])
+    expect(chatAutoAllowed("ses_scoped")).toBe(true)
+  } finally {
+    setChatAutoAllowed("ses_scoped", false)
+    panes.app.renderer.destroy()
+  }
+})
+
+test("n denies a paid call", async () => {
+  await using tmp = await tmpdir()
+  const panes = await mountPanes(tmp.path, () => <PermissionPrompt request={paidRequest} />)
+  try {
+    panes.setActive(true)
+    panes.app.mockInput.pressKey("n")
+    await panes.app.waitFor(() => panes.replies.length === 1)
+    expect(panes.replies).toEqual([{ decision: "reject" }])
   } finally {
     panes.app.renderer.destroy()
   }

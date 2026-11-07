@@ -40,7 +40,7 @@ Claude, ChatGPT, Gemini and 75+ AI model providers.
 ## Install
 
 <p align="center">
-  <img src="docs/readme/install.svg" width="1200" height="420" alt="Install DataForSEO Agent in three commands: tools/install.sh, dataforseo-agent-setup to connect your DataForSEO API account, set a session budget and market and pick any AI model, then dfa to start. Press start: the three bots boot up while the counters fill to 14 SEO agents and 33 SEO workflow skills." />
+  <img src="docs/readme/install.svg" width="1200" height="420" alt="Install DataForSEO Agent in three commands: tools/install.sh, dataforseo-agent-setup to connect your DataForSEO API account, set a session budget and market and pick any AI model, then dataforseo to start. Press start: the three bots boot up while the counters fill to 14 SEO agents and 33 SEO workflow skills." />
 </p>
 
 You need [Bun](https://bun.sh), Python 3, Node 22 or newer (for the DataForSEO MCP server) and a [DataForSEO](https://dataforseo.com) account.
@@ -48,9 +48,9 @@ You need [Bun](https://bun.sh), Python 3, Node 22 or newer (for the DataForSEO M
 ```bash
 git clone https://github.com/AgriciDaniel/dataforseo-agent.git
 cd dataforseo-agent
-tools/install.sh          # builds the app and installs dataforseo-agent and dfa to ~/.local/bin
+tools/install.sh          # builds the app and installs dataforseo-agent and dataforseo to ~/.local/bin
 dataforseo-agent-setup    # account, budget and market, AI model
-dfa                       # start
+dataforseo                # start
 ```
 
 Your first run:
@@ -75,7 +75,7 @@ Choosing a model:
 
 - Claude, through your Claude Code login: `dataforseo-agent auth login claude-agent`
 - ChatGPT, through your ChatGPT account: `dataforseo-agent auth login openai` (add `--method chatgpt-token-sharing` when the terminal is not interactive)
-- Gemini, OpenRouter and the rest: an API key, with `/connect` in the app. Then pick a model with `/models`, or start with `dfa -m provider/model`.
+- Gemini, OpenRouter and the rest: an API key, with `/connect` in the app. Then pick a model with `/models`, or start with `dataforseo -m provider/model`.
 
 </details>
 
@@ -151,7 +151,7 @@ Behind them sits the DataForSEO Brain: source-cited notes and 33 workflow skills
 
 | Command | What it does |
 |---|---|
-| `dfa` or `dataforseo-agent` | Start the app. `dfa -m provider/model` starts with a given model. |
+| `dataforseo` or `dataforseo-agent` | Start the app. `dataforseo -m provider/model` starts with a given model. |
 | `dataforseo-agent-setup` | Connect the account, set budget and market, sign in to a model. |
 | `dataforseo-agent --check-account` | Check the login, balance and today's spend (free). |
 | `dataforseo-agent-update` | Pull the latest version, rebuild and reinstall. |
@@ -217,7 +217,7 @@ The catalog is built from DataForSEO's official OpenAPI spec and pricing pages, 
 - **Platforms:** Linux and macOS (built with Bun). Windows is untested.
 - **Where things live:** the app and its generated agents, skills and MCP config live in `~/.config/dataforseo-agent/` (rewritten on every install). Your own config is `~/.config/dataforseo-agent/dataforseo-agent.jsonc`, created once and never touched again. Sessions and logs are in `~/.local/share/dataforseo-agent/`.
 - **Refreshing the Brain and catalog:** rebuild the catalog with `research/scripts/README.md`, update the Brain following `Brain/docs/OPERATOR_KIT.md`, check it with `Brain/tools/check.sh`, then run `tools/install.sh` again.
-- **Uninstall:** delete `~/.local/bin/dataforseo-agent`, `~/.local/bin/dfa`, `~/.local/bin/dataforseo-agent-setup`, `~/.local/bin/dataforseo-agent-update`, `~/.local/lib/dataforseo-agent` and `~/.config/dataforseo-agent`.
+- **Uninstall:** delete `~/.local/bin/dataforseo-agent`, `~/.local/bin/dataforseo`, `~/.local/bin/dataforseo-agent-setup`, `~/.local/bin/dataforseo-agent-update`, `~/.local/lib/dataforseo-agent` and `~/.config/dataforseo-agent`.
 
 </details>
 

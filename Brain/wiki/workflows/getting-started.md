@@ -8,7 +8,7 @@ domain: dataforseo
 status: stable
 confidence: practitioner
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 tags: [dataforseo, workflow, skill]
 ---
 
@@ -35,7 +35,7 @@ First run, "is it working", "test my setup", or a credentials or balance error.
 2. Report the balance. Under $1, suggest a top up ($50 minimum, balance never expires) before real work ([[sandbox-and-account]]).
 3. Call `status` and mention any API that is not ok.
 4. Run the sandbox SERP call by direct HTTP with the same credentials (the MCP server cannot reach the sandbox). Show that the shape works and say the data is dummy.
-5. Offer one real call: one keyword, settings location and language, Live, $0.002. Run it only after the user's yes.
+5. Offer one real call: one keyword, settings location and language, Live, $0.002. If the user wants it, make the call; the app's request prompt is the approval ([[budget-gates]]).
 6. Show the result, then suggest two workflows that fit what the user said they want.
 
 ## Cost estimate

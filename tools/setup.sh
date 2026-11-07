@@ -83,4 +83,4 @@ case "$m" in
   b) dataforseo-agent auth login openai ;;
 esac
 
-echo; echo "${green}Done.${off} Start with ${bold}dfa${off}. Inside, try /dfs-balance or /dfs-route <your question>."
+echo; echo "${green}Done.${off} Start with ${bold}dataforseo${off}. Inside, try /dfs-balance or /dfs-route <your question>."

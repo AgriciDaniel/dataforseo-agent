@@ -301,8 +301,8 @@ test("session lifecycle updates the terminal title and prints the epilogue after
   })
   const setTitle = setup.renderer.setTerminalTitle.bind(setup.renderer)
   setup.renderer.setTerminalTitle = (title) => {
-    if (title === "dfa | Demo session") initialTitle()
-    if (title === "dfa | Renamed session") renamedTitle()
+    if (title === "dataforseo | Demo session") initialTitle()
+    if (title === "dataforseo | Renamed session") renamedTitle()
     setTitle(title)
   }
   const events = createEventStream()
@@ -384,7 +384,7 @@ test("session title generated while an untitled session is loading remains visib
   const generatedTitle = Promise.withResolvers<void>()
   setup.renderer.setTerminalTitle = (title) => {
     titles.push(title)
-    if (title === "dfa | Generated title") generatedTitle.resolve()
+    if (title === "dataforseo | Generated title") generatedTitle.resolve()
     setTitle(title)
   }
   const sessionRequested = Promise.withResolvers<void>()
@@ -452,7 +452,7 @@ test("session title generated while an untitled session is loading remains visib
     ])
     await Bun.sleep(20)
 
-    const generated = titles.lastIndexOf("dfa | Generated title")
+    const generated = titles.lastIndexOf("dataforseo | Generated title")
     expect(generated).toBeGreaterThan(-1)
     expect(titles.slice(generated + 1)).not.toContain("DataForSEO Agent")
     setup.renderer.destroy()

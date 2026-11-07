@@ -1,4 +1,4 @@
-import { barColors, bars, logo } from "../logo"
+import { MARK_TOP, logo, markCells } from "../logo"
 
 const reset = "\x1b[0m"
 const bold = "\x1b[1m"
@@ -17,12 +17,10 @@ function wordmark(pad = "") {
       .join("")
 
   return logo.left.map((line, index) => {
-    const mark = bars
-      .map((bar, column) => {
-        const hex = barColors[column].slice(1).match(/../g)!.map((part) => parseInt(part, 16))
-        return `\x1b[38;2;${hex.join(";")}m${bar[index]}${reset}`
-      })
-      .join(" ")
+    const rgb = (hex: string) => hex.slice(1).match(/../g)!.map((part) => parseInt(part, 16)).join(";")
+    const mark = (markCells()[index - MARK_TOP] ?? markCells()[0].map(() => ({ char: " " }) as { char: string; fg?: string; bg?: string }))
+      .map((cell) => `${cell.fg ? `\x1b[38;2;${rgb(cell.fg)}m` : ""}${cell.bg ? `\x1b[48;2;${rgb(cell.bg)}m` : ""}${cell.char}${reset}`)
+      .join("")
     const left = `${mark}  ${draw(line, reset, "\x1b[38;5;238m", "\x1b[48;5;238m")}`
     const right = draw(logo.right[index] ?? "", reset, "\x1b[38;5;238m", "\x1b[48;5;238m")
     return `${pad}${left} ${right}`

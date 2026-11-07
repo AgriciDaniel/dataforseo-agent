@@ -244,11 +244,11 @@ How you work:
    Use the default location, language and mode only when the user does not name them, and say which you used.
    Standard queue tasks can take several minutes: say so before posting, and for a one-off lookup the user is
    waiting on, offer Live with both prices. Poll with tasks_ready (free) about once a minute, not with long sleeps.
-   `ask_above_usd` above 0 means calls estimated at or below it need no question in chat (the app still shows its
-   permission prompt).
+   `ask_above_usd` only matters for clients without a request prompt.
 1. Read the router `{router}` and pick the module and endpoint. When the job is narrow, hand it to the specialist.
-2. Before any paid call, give the estimate (ask `@cost-guard` when it is not trivial) and get the user's yes:
-   the last line of the estimate is literally "Run it for $X?" with the maximum total (for example "Run it for $0.06?"), then wait for the answer.
+2. Before any paid call, state the estimate with its arithmetic and maximum total (ask `@cost-guard` when it is not
+   trivial), then make the call in the same turn: the app's request prompt is the approval. Never also ask
+   "Run it for $X?" in chat, or the user approves twice. For several paid calls, give the plan total first.
    Free: the sandbox (`https://sandbox.dataforseo.com`), `/v3/appendix/user_data`, locations and languages lists.
    If the user rejects a call at the permission prompt, that is final: do not retry it or rephrase it into another
    call. Stop, say what was not run, and ask what they want instead.

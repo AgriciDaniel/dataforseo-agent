@@ -6,7 +6,7 @@ DataForSEO Agent hero animation: three pixel bots walk into a terminal where som
 
 ## install.svg
 
-Install DataForSEO Agent in three commands: tools/install.sh, dataforseo-agent-setup to connect your DataForSEO API account, set a session budget and market and pick any AI model, then dfa to start. Press start: the three bots boot up while the counters fill to 14 SEO agents and 33 SEO workflow skills.
+Install DataForSEO Agent in three commands: tools/install.sh, dataforseo-agent-setup to connect your DataForSEO API account, set a session budget and market and pick any AI model, then dataforseo to start. Press start: the three bots boot up while the counters fill to 14 SEO agents and 33 SEO workflow skills.
 
 ## cost.svg
 

@@ -1,15 +1,12 @@
 import {
   CliRenderEvents,
-  RGBA,
   MouseEvent,
   type BoxRenderable,
   type Renderable,
   type ScrollBoxRenderable,
 } from "@opentui/core"
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
-import { batch, createEffect, createMemo, createResource, createSignal, on, onCleanup, Show } from "solid-js"
-import { useConfig } from "../config"
-import { useData } from "../context/data"
+import { createEffect, createMemo, createResource, createSignal, on, onCleanup, Show } from "solid-js"
 import { Keymap } from "../context/keymap"
 import { InteractivityProvider } from "../context/interactivity"
 import { useSessionTerminals } from "../context/session-terminals"
@@ -18,8 +15,7 @@ import { usePanel } from "../context/panel"
 import { useStorage } from "../context/storage"
 import { useDialog } from "../ui/dialog"
 import { Session } from "../routes/session"
-import { Sidebar } from "../routes/session/sidebar"
-import { clampSessionPaneWidth, SESSION_SIDEBAR_WIDTH } from "../ui/layout"
+import { clampSessionPaneWidth } from "../ui/layout"
 import { createPaneResize } from "../ui/pane-resize"
 import { PaneResizeHandle } from "../ui/pane-resize-handle"
 import { useToast } from "../ui/toast"
@@ -29,8 +25,6 @@ import { PanelHost } from "./panel-host"
 export function SessionFrame(props: { sessionID: string; verticalTabsWidth: number }) {
   const sessions = useSessionTerminals()
   const prompt = usePromptRef()
-  const config = useConfig()
-  const data = useData()
   const toast = useToast()
   const terminalError = () => toast.show({ variant: "error", message: "Unable to load terminal" })
   const renderer = useRenderer()
@@ -65,7 +59,6 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
     }
     paneResize.onMouseUp(event)
   }
-  const [sidebarOpen, setSidebarOpen] = createSignal(false)
   const [sessionWidth, setSessionWidth] = createSignal<number>()
   const [activePane, setActivePane] = createSignal<"session" | "right">("session")
   const [restoreTerminalFocus, setRestoreTerminalFocus] = createSignal(false)
@@ -93,41 +86,20 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
   createEffect(
     on([activePanel, () => selectedTerminal()?.id], ([panel, terminal], previous) => {
       if (panel && panel !== previous?.[0]) {
-        setSidebarOpen(false)
         if (terminal) void sessions.selectTerminal(props.sessionID, null).catch(toast.error)
         return
       }
       if (terminal && terminal !== previous?.[1]) {
-        setSidebarOpen(false)
         if (panel) panels.close()
       }
     }),
   )
-  const wide = createMemo(() => dimensions().width - props.verticalTabsWidth > 120)
-  const sidebarVisible = createMemo(() => {
-    if (data.session.get(props.sessionID)?.parentID) return false
-    if (sidebarOpen()) return true
-    return (config.data.session?.sidebar ?? "auto") === "auto" && wide()
-  })
+  // DataForSEO Agent: the account, context and MCP panels moved into the chat sidebar on the left (app.tsx), so
+  // the right side holds only a panel or a terminal.
   const rightPane = createMemo(() => {
     if (activePanel()) return "panel"
-    if (sidebarOpen() && sidebarVisible()) return "sidebar"
     if (selectedTerminal()) return "terminal"
-    if (sidebarVisible()) return "sidebar"
   })
-  const toggleSidebar = () => {
-    batch(() => {
-      const visible = rightPane() === "sidebar"
-      void config
-        .update((draft) => {
-          draft.session = { ...draft.session, sidebar: visible ? "hide" : "auto" }
-        })
-        .catch(toast.error)
-      setSidebarOpen(!visible)
-      if (!visible && activePanel()) panels.close()
-      if (!visible && selectedTerminal()) void sessions.selectTerminal(props.sessionID, null).catch(toast.error)
-    })
-  }
   const focusSession = () => {
     if (fullscreen()) return
     // Permission prompts replace the input, so returning focus must not depend on it.
@@ -145,7 +117,7 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
   }
   const onFocused = () => {
     const current = renderer.currentFocusedRenderable
-    if (rightPane() !== "sidebar" && within(current, rightNode)) setActivePane("right")
+    if (within(current, rightNode)) setActivePane("right")
     if (!fullscreen() && within(current, sessionNode)) setActivePane("session")
   }
   renderer.on(CliRenderEvents.FOCUSED_RENDERABLE, onFocused)
@@ -183,16 +155,6 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
   Keymap.createLayer(() => ({
     mode: "global",
     commands: [
-      {
-        id: "session.sidebar.toggle",
-        title: rightPane() === "sidebar" ? "Hide sidebar" : "Show sidebar",
-        group: "Session",
-        palette: true,
-        run: () => {
-          toggleSidebar()
-          dialog.clear()
-        },
-      },
       ...(sessions.available()
         ? [
             {
@@ -289,8 +251,6 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
             scrollRef={(value) => (sessionScroll = value)}
             verticalTabsWidth={props.verticalTabsWidth}
             promptMuted={activePane() !== "session"}
-            sidebarVisible={rightPane() === "sidebar"}
-            onToggleSidebar={toggleSidebar}
             terminals={sessions.available()}
             visibleTerminalID={rightPane() === "terminal" ? selectedTerminal()?.id : undefined}
             onTerminalPicker={(show) => (showTerminals = show)}
@@ -322,78 +282,56 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
           />
         </Show>
       </box>
-      <Show when={rightPane() === "terminal" || rightPane() === "panel" || (rightPane() === "sidebar" && wide())}>
+      <Show when={rightPane() === "terminal" || rightPane() === "panel"}>
         <box
           ref={(value: BoxRenderable) => (rightNode = value)}
           flexShrink={0}
-          width={
-            fullscreen() ? availableWidth() : rightPane() === "sidebar" ? SESSION_SIDEBAR_WIDTH : paneResize.size()
-          }
+          width={fullscreen() ? availableWidth() : paneResize.size()}
           minWidth={0}
           minHeight={0}
         >
           <Show
-            when={rightPane() === "sidebar"}
+            keyed
+            when={activePanel()}
             fallback={
-              <Show
-                keyed
-                when={activePanel()}
-                fallback={
-                  <Show keyed when={selectedTerminal()?.id}>
-                    {(ptyID) => (
-                      <TerminalPane
-                        ptyID={ptyID}
-                        resizing={paneResize.resizing()}
-                        autoFocus={restoreTerminalFocus() || sessions.shouldFocus(ptyID)}
-                        onAutoFocus={() => {
-                          sessions.clearFocus(ptyID)
-                          setRestoreTerminalFocus(false)
-                        }}
-                        onFocusRequest={(value) => (focusTerminal = value)}
-                        onDisconnect={() => setRestoreTerminalFocus(true)}
-                      />
-                    )}
-                  </Show>
-                }
-              >
-                {(item) => (
-                  <PanelHost
-                    panel={item}
-                    width={fullscreen() ? availableWidth() : paneResize.size()}
-                    focused={activePane() === "right"}
-                    onFocus={focusRightPane}
-                    onTarget={(node) => {
-                      panelNode = node
-                      if (node) {
-                        focusRightPane()
-                        return
-                      }
-                      setActivePane("session")
+              <Show keyed when={selectedTerminal()?.id}>
+                {(ptyID) => (
+                  <TerminalPane
+                    ptyID={ptyID}
+                    resizing={paneResize.resizing()}
+                    autoFocus={restoreTerminalFocus() || sessions.shouldFocus(ptyID)}
+                    onAutoFocus={() => {
+                      sessions.clearFocus(ptyID)
+                      setRestoreTerminalFocus(false)
                     }}
+                    onFocusRequest={(value) => (focusTerminal = value)}
+                    onDisconnect={() => setRestoreTerminalFocus(true)}
                   />
                 )}
               </Show>
             }
           >
-            <Sidebar sessionID={props.sessionID} />
+            {(item) => (
+              <PanelHost
+                panel={item}
+                width={fullscreen() ? availableWidth() : paneResize.size()}
+                focused={activePane() === "right"}
+                onFocus={focusRightPane}
+                onTarget={(node) => {
+                  panelNode = node
+                  if (node) {
+                    focusRightPane()
+                    return
+                  }
+                  setActivePane("session")
+                }}
+              />
+            )}
           </Show>
         </box>
       </Show>
       <Show when={!fullscreen() && (rightPane() === "terminal" || rightPane() === "panel") && availableWidth() >= 3}>
         <PaneResizeHandle resize={paneResize} left={availableWidth() - paneResize.size() - 1} highlight="right" />
-      </Show>
-      <Show when={rightPane() === "sidebar" && !wide()}>
-        <box
-          position="absolute"
-          top={0}
-          left={0}
-          right={0}
-          bottom={0}
-          alignItems="flex-end"
-          backgroundColor={RGBA.fromInts(0, 0, 0, 70)}
-        >
-          <Sidebar sessionID={props.sessionID} />
-        </box>
       </Show>
     </box>
   )

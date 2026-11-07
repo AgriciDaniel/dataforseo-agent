@@ -16,7 +16,7 @@ Facts below were checked against official pages on 2026-11-06 (research/brain-fa
 ## Rules that override older notes
 - **Prices come from the catalog** (`research/endpoints.json`, `price.tiers`), never from memory or old notes. Reference notes were refreshed to 2026-11-06 list prices; any note still flagged `price_status: pre-2026-07-01-repricing` has unverified figures.
 - **Endpoint paths come from the catalog** (576 active of 583 entries). If a note and the catalog disagree, the catalog wins.
-- **No paid call without an estimate and the user's approval.** End every paid estimate with the line "Run it for $X?" (the maximum total). Test in the sandbox by direct HTTP; the official MCP server cannot reach the sandbox and has no cost guard.
+- **No paid call without an estimate and one approval.** In the app, state the estimate and make the call: the request prompt is the approval, so never also ask "Run it for $X?" in chat. Without a request prompt, end with "Run it for $X?" and wait. Test in the sandbox by direct HTTP; the official MCP server cannot reach the sandbox and has no cost guard.
 - Model names for LLM Responses come from the free `/models` endpoints, not from notes.
 
 ## Current platform state

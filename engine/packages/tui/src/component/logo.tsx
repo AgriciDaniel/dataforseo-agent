@@ -3,7 +3,7 @@ import { For, type JSX } from "solid-js"
 import { useTerminalDimensions } from "@opentui/solid"
 import { useTheme } from "../context/theme"
 import { tint } from "../theme/color"
-import { barColors, bars, logo } from "../logo"
+import { MARK_TOP, accent, logo, markCells } from "../logo"
 
 export function Logo() {
   const theme = useTheme()
@@ -49,12 +49,15 @@ export function Logo() {
     })
   }
 
+  const cells = markCells()
+  const color = (hex: string | undefined) => (hex ? RGBA.fromHex(hex) : undefined)
   const mark = (row: number) => (
-    <box flexDirection="row" gap={1}>
-      <For each={bars}>
-        {(bar, column) => (
-          <text fg={RGBA.fromHex(barColors[column()])} selectable={false}>
-            {bar[row]}
+    <box flexDirection="row">
+      {/* Rows above and below the mark keep its width, so the wordmark stays put. */}
+      <For each={cells[row - MARK_TOP] ?? cells[0].map(() => ({ char: " " }))}>
+        {(cell) => (
+          <text fg={color(cell.fg)} bg={color(cell.bg)} selectable={false}>
+            {cell.char}
           </text>
         )}
       </For>
@@ -72,7 +75,7 @@ export function Logo() {
                 <box flexDirection="row" gap={2}>
                   <box flexDirection="row">{renderLine(line, theme.text.base, true)}</box>
                   {dimensions().width < 86 ? null : (
-                    <box flexDirection="row">{renderLine(logo.right[index()], RGBA.fromHex(barColors[2]), true)}</box>
+                    <box flexDirection="row">{renderLine(logo.right[index()], RGBA.fromHex(accent), true)}</box>
                   )}
                 </box>
               )}

@@ -51,6 +51,7 @@ Scores per URL and category, the top failing audits with fixes, and before and a
 
 ## Visuals
 Unverified until a sandbox payload confirms the score fields.
+- `gauge`: the four category scores for one URL (performance, accessibility, best practices, SEO). Fields: UNVERIFIED, same fields as the table. Scores 0 to 1 are read as fractions.
 - `table`: category scores per URL (performance, accessibility, best practices, SEO). Fields: UNVERIFIED: the catalog lists only `tasks[].id`, `tasks[].status_code`, `tasks[].cost` for `lighthouse/task_get/json`; confirm the score paths from a sandbox payload before use. One row per URL, scores 0 to 100.
 - `grouped-bar`: scores before vs after a fix. Fields: UNVERIFIED, same fields as the table. Max 4 categories, unit score.
 

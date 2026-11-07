@@ -60,7 +60,8 @@ A position time-series table (keyword, location, device, date, rank_absolute, ra
 
 ## Visuals
 - `table`: keywords with current position, change and history. Fields: `items[].rank_absolute`, `items[].domain`, `items[].url`. Sparkline column of past positions, lower_is_better, sort by position asc.
-- `hbar`: rank distribution of the tracked domain. Fields: `items[].metrics` (metrics.organic.pos_1, pos_2_3, pos_4_10, pos_11_20). Buckets in rank order, unit keywords.
+- `distribution`: rank distribution of the tracked domain (add competitors as more series). Fields: `items[].metrics` (metrics.organic.pos_1, pos_2_3, pos_4_10, pos_11_20, pos_21_30 and up). x = buckets best first, one series per domain.
+- `heatmap`: position by keyword and run when there are 3 or more runs. Fields: `items[].rank_absolute`. rows = keywords, cols = run dates, lower_is_better, null where not ranking.
 - `line`: average position over runs. Fields: `items[].rank_absolute`. lower_is_better; invert the axis; at least 3 runs.
 
 ## Tell the user

@@ -15,7 +15,7 @@ The app reads `~/.config/dataforseo-agent/settings.json`. The user's words alway
 | Field | Default | How to use it |
 |---|---|---|
 | `budget_per_session_usd` | 1.00 | Hard stop. Track the billed `tasks[].cost` of every call this session. Never start a call whose estimate would take the session total past it, even with a yes; say how much is left and ask the user to raise the setting or start a new session. |
-| `ask_above_usd` | 0 | Ask before any paid call whose estimate is above this. 0 means always ask. Free calls never ask. Below the threshold, still state the estimate. The app's own request prompt (with the catalog list price) still appears. |
+| `ask_above_usd` | 0 | For clients without a request prompt: ask in chat before any paid call whose estimate is above this (0 means always). In the app the request prompt is the approval, so never ask in chat as well; always state the estimate. Free calls never ask. |
 | `default_location_code` | 2840 (United States) | Use when the user names no location. |
 | `default_language_code` | "en" | Use when the user names no language. |
 | `prefer_mode` | "cheapest" | "cheapest": the lowest price mode that answers the job (usually Standard queue). "standard": queue unless the endpoint is Live only. "live": Live where it exists. A user request for "now" or "later" wins. |

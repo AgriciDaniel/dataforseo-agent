@@ -60,6 +60,7 @@ A competitive gap pack: keyword-gap table (competitor ranks, you do not), page-l
 
 ## Visuals
 - `table`: competitors with shared keywords, average position and traffic. Fields: `items[].domain`, `items[].intersections`, `items[].avg_position`, `items[].metrics`. lower_is_better on avg position; sort by intersections desc, top 15.
+- `overlap`: keyword overlap of the target and its top 1 or 2 competitors. Fields: `items[].intersections` (the shared count), `items[].metrics` (metrics.organic.count for each domain's total). x = each domain and each "a + b" region; for 3 domains the three way count comes from `domain_intersection` total_count.
 - `grouped-bar`: shared vs unique keywords per competitor. Fields: `items[].intersections`, `items[].metrics` (metrics.organic.count). Max 6 competitors.
 - `table`: gap keywords where competitors rank and the target does not. Fields: `items[].keyword_data`, `items[].first_domain_serp_element`, `items[].second_domain_serp_element`. Sort by volume desc, top 25.
 

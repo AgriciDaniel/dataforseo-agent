@@ -104,7 +104,7 @@ function ReminderAlignmentFixture() {
 function TrailingStatusFixture() {
   return (
     <InlineToolRow icon=":" complete={true} pending="" status={<text flexShrink={0}> Background </text>}>
-      Explore Subagent — Inspect renderer status styling
+      Explore Subagent: Inspect renderer status styling
     </InlineToolRow>
   )
 }
@@ -155,10 +155,10 @@ describe("TUI inline tool wrapping", () => {
 
   test("wraps a trailing status as one padded item", async () => {
     expect(await renderFrame(() => <TrailingStatusFixture />, { width: 70, height: 2 })).toBe(
-      "   : Explore Subagent — Inspect renderer status styling  Background",
+      "   : Explore Subagent: Inspect renderer status styling  Background",
     )
     expect(await renderFrame(() => <TrailingStatusFixture />, { width: 62, height: 2 })).toBe(
-      "   : Explore Subagent — Inspect renderer status styling\n      Background",
+      "   : Explore Subagent: Inspect renderer status styling\n      Background",
     )
   })
 

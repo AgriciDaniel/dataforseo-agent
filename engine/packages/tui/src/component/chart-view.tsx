@@ -177,6 +177,18 @@ export function ChartView(props: {
         return tint(bad, good, 0.25)
       case "tile":
         return theme.background.base
+      case "grade0":
+      case "grade1":
+      case "grade2":
+      case "grade3":
+      case "grade4":
+      case "grade5":
+      case "grade6": {
+        // Worst (red) through warning (amber) to best (green).
+        const t = Number(role.slice(5)) / 6
+        const warn = theme.text.feedback.warning.base
+        return t <= 0.5 ? tint(bad, warn, t * 2) : tint(warn, good, (t - 0.5) * 2)
+      }
       case "seq0":
       case "seq1":
       case "seq2":
@@ -241,7 +253,7 @@ export function ChartView(props: {
       </Show>
       <Show when={hasTips()}>
         <text fg={tip() ? theme.text.base : hint} wrapMode="none">
-          {tip() ?? "point at a tile or marker for details"}
+          {tip() ?? "point at a letter, tile or marker to see its keyword and numbers"}
         </text>
       </Show>
       <box flexDirection="row" flexWrap="wrap" columnGap={1} height="auto">

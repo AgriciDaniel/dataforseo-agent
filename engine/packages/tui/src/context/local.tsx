@@ -1,3 +1,4 @@
+import { Locale } from "../util/locale"
 import { createStore } from "solid-js/store"
 import { dedupeWith } from "effect/Array"
 import { createSimpleContext } from "./helper"
@@ -118,6 +119,14 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             if (selected) model.set(selected)
           })
         },
+        /** A switch the user asked for (menu, shift+tab, dialog): set it and say so, so a switch is never silent. */
+        pick(id: string) {
+          const before = this.current()?.id
+          this.set(id)
+          const after = this.current()?.id
+          if (after && after !== before)
+            toast.show({ variant: "info", message: `Now using ${Locale.titlecase(after)}`, duration: 2500 })
+        },
         move(direction: 1 | -1) {
           batch(() => {
             const current = this.current()
@@ -126,7 +135,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             if (next < 0) next = agents().length - 1
             if (next >= agents().length) next = 0
             const value = agents()[next]
-            this.set(value.id)
+            this.pick(value.id)
           })
         },
         color(id: string) {

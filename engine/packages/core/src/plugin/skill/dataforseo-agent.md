@@ -6,7 +6,7 @@ workflow skills instead.
 
 ## Start and set up
 
-- `dfa` (or `dataforseo-agent`) starts the app in the current folder. Saved charts and reports go to
+- `dataforseo` (or `dataforseo-agent`) starts the app in the current folder. Saved charts and reports go to
   `./dataforseo-exports/` in that folder.
 - `dataforseo-agent-setup` (run it in a terminal, not through the model) connects the DataForSEO account,
   sets the session budget and default market, and connects a model. The password is stored only in
@@ -45,6 +45,8 @@ variable. Pick a model with `/models`.
 Every paid DataForSEO request shows a permission prompt with the method, path and request body. "Allow
 once" runs it. "Always allow" applies to that one endpoint path only. "Reject" is final for that call.
 Free endpoints (task results, lists, `user_data`, docs search) run without a prompt.
+This prompt is the only approval: state the estimate in chat, then make the call, and do not also ask
+"Run it for $X?" in chat, or the user approves the same call twice.
 
 ## Charts
 

@@ -15,7 +15,7 @@ import {
 } from "@opentui/core"
 import { Locale } from "../util/locale"
 import { stringWidth } from "../util/string-width"
-import { bars } from "../logo"
+import { markText } from "../logo"
 import { monoTruncate } from "./mono"
 import type { RunSplashTheme } from "./theme"
 
@@ -176,7 +176,7 @@ function buildExit(input: SplashWriterInput, ctx: ScrollbackRenderContext): Scro
   const left = input.theme.left
   const right = input.theme.right
   const leftShadow = input.theme.leftShadow
-  const mark = input.mono ? ["[D]"] : [1, 2, 3].map((row) => bars.map((bar) => bar[row]).join(" "))
+  const mark = input.mono ? ["[D]"] : markText()
   const top = 1
   const body_left = (mark[0]?.length ?? 0) + 2
   const session = "Session  "

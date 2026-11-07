@@ -29,6 +29,11 @@ export function SidebarContext(props: { context: Plugin.Context; sessionID: stri
               <text fg={theme.text.muted}>{value().tokens.toLocaleString()} tokens</text>
               <Show when={value().percent !== undefined}>
                 <text fg={theme.text.muted}>{value().percent}% used</text>
+                {/* A 20 cell bar, like the budget bar above it. */}
+                <box flexDirection="row">
+                  <text fg={theme.text.feedback.info.base}>{"█".repeat(Math.round((Math.min(100, value().percent ?? 0) / 100) * 20))}</text>
+                  <text fg={theme.background.raised.high}>{"█".repeat(20 - Math.round((Math.min(100, value().percent ?? 0) / 100) * 20))}</text>
+                </box>
               </Show>
             </>
           )}

@@ -25,7 +25,7 @@ export function DialogAgent() {
       current={local.agent.current()?.id}
       options={options()}
       onSelect={(option) => {
-        local.agent.set(option.value)
+        local.agent.pick(option.value)
         dialog.clear()
       }}
     />

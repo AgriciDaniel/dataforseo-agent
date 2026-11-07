@@ -25,9 +25,12 @@ MCP server, whose `api_request` tool has no cost check of its own ([[mcp]], [[co
 2. **Show the arithmetic.** One line per request group, then a total. Use the worst case the user could be
    billed, not the likely case. When the price has a per-row or per-item part, multiply by the `limit` you
    will send, not by the rows you expect back.
-3. **Ask.** Show the plan and the maximum total, and wait for a clear yes. The last line of every paid
-   estimate is literally "Run it for $X?" with the maximum total, for example "Run it for $0.06?". The app's request prompt then shows the catalog list price; your estimate still comes first and covers the full plan. A yes covers this plan only. If
-   the plan changes (more tasks, a pricier mode, a higher limit, a new endpoint), estimate and ask again.
+3. **Ask once.** Show the plan and the maximum total. In the app, then make the call in the same turn:
+   its request prompt (method, path, body, list price) is the one approval, and a second question in chat
+   makes the user approve twice. End the estimate with "Maximum $X. Approve it in the prompt." For several
+   paid calls, give the plan total first; each call then gets its own prompt. Clients without a request
+   prompt: end with "Run it for $X?" (for example "Run it for $0.06?") and wait for a clear yes. An approval
+   covers this plan only; if it changes (more tasks, a pricier mode, a higher limit), estimate again.
    Free calls (sandbox, `user_data`, locations, languages, `tasks_ready`, `task_get`) need no approval.
 4. **Run.** Send exactly the approved requests. Stop when the approved maximum would be exceeded. Never
    retry spend errors (40200, 40203, 40210); report them instead.
@@ -46,7 +49,7 @@ for `serp/google/organic/task_post` in the Standard queue (one SERP of 10 result
 | `tasks_ready` and `task_get/advanced` | free |
 | **Total** | **100 x `P`**, shown in USD |
 
-With `P` = $0.0006 the total is $0.06, and the estimate ends: Run it for $0.06?
+With `P` = $0.0006 the total is $0.06, and the estimate ends: Maximum $0.06. Approve it in the prompt.
 
 Depth bills one more base price per extra 10 results, and `calculate_rectangles` or
 `load_async_ai_overview` each add one base price per task, so adding pixel rankings here makes it

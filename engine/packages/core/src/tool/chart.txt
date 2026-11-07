@@ -5,16 +5,22 @@ Pick the type from the workflow's "Visuals" section when there is one, and pass 
   Example: { type: "table", x: ["example.com", "rival.com"], series: [{ name: "Position", values: [3, 7] }, { name: "ETV", values: [1200, 640] }] }.
   Tables never use rows, cols or values; those are for heatmap only.
 - kpi: series = [{ name, values: [current, previous?], lower_is_better? }] (set lower_is_better on lost links, cost, position)
-- hbar: x = labels, one series (rankings, top pages, top domains)
+- hbar: x = labels, one series (rankings, top pages, top domains). For positions set unit "position" or lower_is_better, so #1 gets the longest bar and values read "#3"
 - grouped-bar: x = labels, 2 or more series (you vs competitors)
 - share-bar: x = parts, one series of counts or shares (SERP feature share, intent mix)
 - diverging-bar: x = dates, exactly 2 series [positive, negative] (new vs lost backlinks)
 - line: x = dates or months, 1 or more series (search volume, rank over time)
 - sparkline: series = one trend per name
-- scatter: series values are [x, y] pairs; set x_label and y_label (difficulty vs volume); log scale is automatic for wide ranges
+- scatter: series values are [x, y] pairs; set x_label and y_label (difficulty vs volume); log scale is automatic for wide ranges. Always pass labels (the keyword per point): points then show as letters with a key. For difficulty vs volume use x_label "Keyword difficulty" so points take the KD tier colors and the report shades the easy, in demand corner
 - heatmap: rows, cols, values[][] with null for no value; set lower_is_better for ranks
 - geogrid: values[][] = the business's rank at each grid point (null = not found), center = [row, col] of the business; drawn as colored map tiles with top 3 share, coverage and average rank (local rank grids)
 - tilemap: x = US state names or codes, one series (interest or volume by state); drawn as a US tile map
+- distribution: x = rank buckets best first (e.g. "#1", "#2-3", "#4-10", "#11-20", "#21-100"), one series per domain with its keyword count in each bucket (Labs metrics.organic pos_1, pos_2_3, pos_4_10 ...); drawn as one stacked bar per domain, green to red
+- overlap: keyword overlap of 2 or 3 domains. x = each domain (its total keyword count) and each shared region joined with " + " (e.g. "you.com + rival.com" = their intersections count; with 3 domains also every pair and "a + b + c"); one series with those counts as the API gives them. The tool works out the exclusive regions and draws a Venn diagram in the report
+- gauge: series = [{ name, values: [score] }], scores 0 to 100 (0 to 1 is read as a fraction, as Lighthouse reports it); green 90+, amber 50 to 89, red below 50
+- donut: like share-bar (x = parts, one series); a donut in the HTML report, a share bar in the terminal. Prefer share-bar unless the user asks for a pie or donut
 - scatter points can carry names: series[].labels = one label per point (shown on hover)
+
+Columns named "KD" (or "Keyword difficulty") are colored by difficulty tier (0-20 easy green to 81+ dark red); a column named "Intent" shows Info, Comm, Trans, Nav pills; a column of number arrays (monthly searches, oldest first) shows the last 12 months as a trend with its change.
 
 Rules: take numbers straight from the API response, never retype or round them yourself. Set unit ("$", "%", or a word), sort and limit (default top 15 for bars). Write source as "<endpoint>, billed $<tasks[].cost>" (for example "/v3/serp/google/organic/live/advanced, billed $0.002"), or "<endpoint>, sandbox, dummy data" for sandbox responses. One chart per call; call it again for another view.

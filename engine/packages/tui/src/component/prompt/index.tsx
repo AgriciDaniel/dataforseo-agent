@@ -70,6 +70,9 @@ import { directoryRecentValue } from "../../prompt/directory-completion"
 import { useWorkingDirectoryActions } from "../../ui/working-directory-actions"
 import { truncateFilePath } from "../../ui/file-path"
 import { PromptMetadataRow } from "./metadata"
+import { FooterMenu, type FooterMenuItem } from "./footer-menu"
+import { DialogModel } from "../dialog-model"
+import { chatAutoAllowed, rootSession, setChatAutoAllowed } from "../../util/chat-auto-allow"
 
 export type PromptProps = {
   sessionID?: string
@@ -1096,6 +1099,7 @@ export function Prompt(props: PromptProps) {
 
   let submitting = false
   async function submit(delivery: SessionInbox.Delivery = "steer") {
+    setMenu(undefined)
     if (disabled()) return false
     // Prevent overlapping invocations (e.g. a double-pressed Enter, or the
     // input's native onSubmit racing another dispatch). Without this guard,
@@ -1578,6 +1582,48 @@ export function Prompt(props: PromptProps) {
     return promptDisplay().agentColor ?? theme.border.base
   })
   const agentLabel = createMemo(() => (store.mode === "shell" ? "Shell" : promptDisplay().agentLabel))
+  // DataForSEO Agent: the footer dropdowns (agent, model) and the chat's auto-allow switch for paid calls.
+  const [menu, setMenu] = createSignal<"agent" | "model">()
+  const menuWidth = () => Math.max(24, Math.min(64, dimensions().width - 8))
+  const agentItems = createMemo<FooterMenuItem[]>(() =>
+    local.agent.list().map((agent) => ({
+      id: agent.id,
+      label: Locale.titlecase(agent.id),
+      detail: agent.description,
+      color: local.agent.color(agent.id),
+    })),
+  )
+  const modelKey = (model: { providerID: string; modelID: string }) => `${model.providerID}/${model.modelID}`
+  const modelItems = createMemo<FooterMenuItem[]>(() => {
+    const list = data.location.model.list(currentLocation.ref ?? data.location.default()) ?? []
+    const current = local.model.current()
+    const seen = new Set<string>()
+    // Current first, then favorites and recents, then the rest of the catalog, up to 8.
+    const picks = [
+      ...(current ? [current] : []),
+      ...local.model.favorite(),
+      ...local.model.recent(),
+      ...list.map((info) => ({ providerID: info.providerID, modelID: info.id })),
+    ]
+      .filter((model) => {
+        const key = modelKey(model)
+        if (seen.has(key)) return false
+        seen.add(key)
+        return list.some((info) => info.providerID === model.providerID && info.id === model.modelID)
+      })
+      .slice(0, 8)
+    return [
+      ...picks.map((model) => {
+        const info = list.find((item) => item.providerID === model.providerID && item.id === model.modelID)
+        return { id: modelKey(model), label: info?.name ?? model.modelID, detail: model.providerID }
+      }),
+      { id: "*", label: "All models…", detail: "search every connected model" },
+    ]
+  })
+  const chatRoot = createMemo(() =>
+    props.sessionID ? rootSession(props.sessionID, (id) => data.session.get(id)?.parentID) : undefined,
+  )
+  const autoAllowed = createMemo(() => chatAutoAllowed(chatRoot()))
   const animateMetadata = !revealedPromptMetadata.has(local)
   const metadataAnimationsEnabled = () => animationsEnabled() && animateMetadata
   const agentMetaAlpha = createFadeIn(() => !!agentLabel(), metadataAnimationsEnabled)
@@ -1648,6 +1694,38 @@ export function Prompt(props: PromptProps) {
   return (
     <>
       <box ref={(r: BoxRenderable) => (anchor = r)} visible={props.visible !== false} width="100%">
+        <Show when={menu()}>
+          {(kind) => {
+            const items = () => (kind() === "agent" ? agentItems() : modelItems())
+            return (
+              <box position="absolute" zIndex={100} left={2} top={-(items().length + 3)}>
+                <FooterMenu
+                  id={`prompt-menu-${kind()}`}
+                  title={kind() === "agent" ? "Agent" : "Model"}
+                  items={items()}
+                  current={
+                    kind() === "agent"
+                      ? local.agent.current()?.id
+                      : local.model.current()
+                        ? modelKey(local.model.current()!)
+                        : undefined
+                  }
+                  width={menuWidth()}
+                  onClose={() => setMenu(undefined)}
+                  onSelect={(id) => {
+                    // Read which menu this is before closing it: the closed menu can no longer be read.
+                    const which = kind()
+                    setMenu(undefined)
+                    if (which === "agent") return local.agent.pick(id)
+                    if (id === "*") return dialog.replace(() => <DialogModel />)
+                    const [providerID, ...rest] = id.split("/")
+                    local.model.set({ providerID, modelID: rest.join("/") }, { recent: true })
+                  }}
+                />
+              </box>
+            )
+          }}
+        </Show>
         <box
           width="100%"
           border={["left"]}
@@ -1744,6 +1822,8 @@ export function Prompt(props: PromptProps) {
               maxHeight={maxHeight()}
               cursorStyle={cursorStyle()}
               onContentChange={() => {
+                // Typing closes the footer dropdown, so a later Enter submits instead of picking a row.
+                setMenu(undefined)
                 const value = input.plainText
                 setStore("prompt", "text", value)
                 auto()?.onInput(value)
@@ -1834,7 +1914,22 @@ export function Prompt(props: PromptProps) {
                 agentAlpha={agentMetaAlpha()}
                 modelAlpha={modelMetaAlpha()}
                 variantAlpha={variantMetaAlpha()}
+                onAgent={() => setMenu((open) => (open === "agent" ? undefined : "agent"))}
+                onModel={() => setMenu((open) => (open === "model" ? undefined : "model"))}
               />
+              <Show when={chatRoot() && store.mode === "normal" && dimensions().width >= 70}>
+                <text
+                  id="prompt-auto-allow"
+                  flexShrink={0}
+                  fg={autoAllowed() ? theme.text.feedback.success.base : theme.text.muted}
+                  onMouseUp={() => {
+                    const root = chatRoot()
+                    if (root) setChatAutoAllowed(root, !autoAllowed())
+                  }}
+                >
+                  {autoAllowed() ? "● auto-allow paid calls: on" : "○ auto-allow paid calls: off"}
+                </text>
+              </Show>
             </box>
           </box>
         </box>

@@ -17,6 +17,7 @@ import {
   CliRenderEvents,
   createCliRenderer,
   MouseButton,
+  RGBA,
   type CliRenderer,
   type CliRendererConfig,
   type ThemeMode,
@@ -77,6 +78,7 @@ import { DialogAgent } from "./component/dialog-agent"
 import { DialogSessionList } from "./component/dialog-session-list"
 import { DialogOpen, DialogOpenKey, moveOpenSession } from "./component/dialog-open"
 import { SessionTabs } from "./component/session-tabs"
+import { ChatSidebar, ChatSidebarUnfold } from "./component/chat-sidebar"
 import { clampSessionTabsWidth, sessionTabsFitVertically, SESSION_SIDEBAR_WIDTH } from "./ui/layout"
 import { createPaneResize } from "./ui/pane-resize"
 import { PaneResizeHandle } from "./ui/pane-resize-handle"
@@ -525,7 +527,7 @@ function App() {
       .environment({ sessionID: session.id, variables: terminalEnvironment.variables })
       .catch(toast.error)
   })
-  const [layout, updateLayout] = useStorage().store<{ verticalTabsWidth?: number }>("layout", {
+  const [layout, updateLayout] = useStorage().store<{ verticalTabsWidth?: number; chatSidebar?: boolean }>("layout", {
     initial: { verticalTabsWidth: SESSION_SIDEBAR_WIDTH },
   })
   const tabsResize = createPaneResize({
@@ -607,10 +609,39 @@ function App() {
     panels.current()?.sessionID === route.data.sessionID &&
     panels.presentation() === "fullscreen"
   const tabsVisible = () => tabsAvailable() && !fullscreenPanel()
-  const verticalTabsVisible = () => tabsVisible() && tabsVertical()
+  // DataForSEO Agent: the chat sidebar on the left (chats, then the account and context panels). It replaces the
+  // vertical tabs unless tabs.layout is set to "vertical", folds away with the sidebar keybind, and opens by
+  // default on wide terminals unless session.sidebar is "hide". Too narrow to dock, it opens over the chat.
+  const chatSidebarMode = () => config.data.tabs.layout !== "vertical"
+  const chatSidebarOpen = () =>
+    layout.chatSidebar ?? ((config.data.session?.sidebar ?? "auto") !== "hide" && dimensions().width >= 120)
+  const chatSidebarAvailable = () =>
+    chatSidebarMode() && sessionTabs.enabled() && route.data.type !== "plugin" && !fullscreenPanel()
+  const chatSidebarDocked = () => sessionTabsFitVertically(dimensions().width, tabsResize.size())
+  const chatSidebarVisible = () => chatSidebarAvailable() && chatSidebarOpen()
+  const toggleChatSidebar = () => {
+    const next = !chatSidebarOpen()
+    void updateLayout((draft) => {
+      draft.chatSidebar = next
+    }).catch((error) => console.error("Failed to persist TUI layout", error))
+  }
+  const verticalTabsVisible = () =>
+    chatSidebarMode() ? chatSidebarVisible() && chatSidebarDocked() : tabsVisible() && tabsVertical()
+  const leftWidth = () => (verticalTabsVisible() ? tabsResize.size() : 0)
 
   // Measure the prospective split layout, even while full-screen hides the tabs.
-  createEffect(() => panels.setWidth(dimensions().width - (tabsAvailable() && tabsVertical() ? tabsResize.size() : 0)))
+  createEffect(() =>
+    panels.setWidth(
+      dimensions().width -
+        (chatSidebarMode()
+          ? verticalTabsVisible()
+            ? tabsResize.size()
+            : 0
+          : tabsAvailable() && tabsVertical()
+            ? tabsResize.size()
+            : 0),
+    ),
+  )
   createEffect(() => {
     const current = panels.current()
     if (!current || (route.data.type === "session" && route.data.sessionID === current.sessionID)) return
@@ -640,12 +671,12 @@ function App() {
         return
       }
 
-      setTerminalTitle(renderer, `dfa | ${title.length > 40 ? title.slice(0, 37) + "…" : title}`)
+      setTerminalTitle(renderer, `dataforseo | ${title.length > 40 ? title.slice(0, 37) + "…" : title}`)
       return
     }
 
     if (route.data.type === "plugin") {
-      setTerminalTitle(renderer, `dfa | ${route.data.name}`)
+      setTerminalTitle(renderer, `dataforseo | ${route.data.name}`)
     }
   })
 
@@ -1311,6 +1342,30 @@ function App() {
 
   Keymap.createLayer(() => ({
     mode: "global",
+    enabled: chatSidebarAvailable,
+    commands: [
+      {
+        id: "session.sidebar.toggle",
+        title: chatSidebarOpen() ? "Hide sidebar" : "Show sidebar",
+        group: "Session",
+        palette: true,
+        run: () => {
+          toggleChatSidebar()
+          dialog.clear()
+        },
+      },
+    ],
+  }))
+
+  // Opened over the chat on a narrow terminal, escape folds it again.
+  Keymap.createLayer(() => ({
+    priority: 10,
+    enabled: () => chatSidebarVisible() && !chatSidebarDocked() && dialog.stack.length === 0,
+    commands: [{ bind: "escape", title: "Close sidebar", group: "Session", run: toggleChatSidebar }],
+  }))
+
+  Keymap.createLayer(() => ({
+    mode: "global",
     enabled: () => !sessionTabs.enabled(),
     bindings: pinnedSessionBindingCommands,
   }))
@@ -1421,12 +1476,14 @@ function App() {
         onMouseUp={tabsResize.onMouseUp}
       >
         <Show when={verticalTabsVisible()}>
-          <SessionTabs orientation="vertical" width={tabsResize.size()} />
+          <Show when={chatSidebarMode()} fallback={<SessionTabs orientation="vertical" width={tabsResize.size()} />}>
+            <ChatSidebar width={tabsResize.size()} onClose={toggleChatSidebar} />
+          </Show>
         </Show>
         <box flexGrow={1} minWidth={0} flexDirection="column">
           <Show when={plugins.ready()}>
             <box flexGrow={1} minHeight={0} flexDirection="column">
-              <Show when={tabsVisible() && !tabsVertical()}>
+              <Show when={tabsVisible() && (chatSidebarMode() ? !chatSidebarVisible() : !tabsVertical())}>
                 <SessionTabs />
               </Show>
               <Switch>
@@ -1438,7 +1495,7 @@ function App() {
                     {(sessionID) => (
                       <SessionFrame
                         sessionID={sessionID}
-                        verticalTabsWidth={verticalTabsVisible() ? tabsResize.size() : 0}
+                        verticalTabsWidth={leftWidth()}
                       />
                     )}
                   </Show>
@@ -1457,6 +1514,22 @@ function App() {
         </box>
         <Show when={verticalTabsVisible()}>
           <PaneResizeHandle resize={tabsResize} left={tabsResize.size() - 1} />
+        </Show>
+        <Show when={chatSidebarVisible() && !chatSidebarDocked()}>
+          <box
+            position="absolute"
+            top={0}
+            left={0}
+            right={0}
+            bottom={0}
+            zIndex={100}
+            backgroundColor={RGBA.fromInts(0, 0, 0, 70)}
+          >
+            <ChatSidebar width={Math.min(tabsResize.size(), dimensions().width - 4)} onClose={toggleChatSidebar} />
+          </box>
+        </Show>
+        <Show when={chatSidebarAvailable() && !chatSidebarOpen()}>
+          <ChatSidebarUnfold onOpen={toggleChatSidebar} />
         </Show>
       </box>
       <Show when={devtools() && !(route.data.type === "plugin" && route.data.id === "dataforseo-agent.stats")}>

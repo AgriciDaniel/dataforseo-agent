@@ -106,3 +106,8 @@ Entry point: [[index]] · [[overview]] · [[hot]] · [[coverage]].
 ## [2026-11-07] update | prompt price and endpoint counts
 - Endpoint counts made explicit: 583 catalog entries, 576 active (7 deprecated, removed or unavailable) in hot, api-basics, sandbox-coverage gap, SKILL.md, claim ledger C12 and canon 010.
 - budget-gates step 3 and settings: the app's request prompt shows the catalog list price; the agent's estimate still comes first.
+
+## [2026-11-07] update | one approval gate per paid call
+- Daniel approved one Labs call twice: a chat "Run it for $0.024?" and then the app's request prompt (session `ses_e4a0153eaffeImaxhJ8hOVZh0a`).
+- In the app the request prompt is now the only approval: state the estimate and make the call. "Run it for $X?" stays for clients without a prompt.
+- Updated: [[hot]], [[budget-gates]], [[settings]], [[budget-planner]], [[getting-started]], [[monthly-seo-report]].

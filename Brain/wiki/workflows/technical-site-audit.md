@@ -60,6 +60,7 @@ A technical audit report: site `onpage_score`, an issue inventory with page coun
 
 ## Visuals
 - `kpi`: pages crawled, crawl status and page metrics. Fields: `crawl_status`, `domain_info`, `page_metrics` (summary). Values [current, previous] when re-crawled.
+- `gauge`: the site's on page score. Fields: `page_metrics.onpage_score` (0 to 100). Add one gauge per crawled site when comparing.
 - `hbar`: issue counts by check. Fields: `page_metrics` (checks). Sort desc, top 15, unit pages.
 - `table`: worst pages. Fields: `items[].url`, `items[].onpage_score`, `items[].status_code`, `items[].page_timing`. Sort by onpage_score asc, top 25.
 

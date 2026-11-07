@@ -1,0 +1,125 @@
+import { expect, test } from "bun:test"
+import { createTestRenderer } from "@opentui/core/testing"
+import { Effect, FileSystem } from "effect"
+import { Global } from "@dataforseo-agent/util/global"
+import { mkdir } from "node:fs/promises"
+import { createEventStream, createFetch, directory, json } from "./fixture/tui-client"
+import { tmpdir } from "./fixture/fixture"
+import { waitForHighlightedFrame } from "./fixture/frame"
+import { filterChats } from "../src/component/chat-sidebar"
+
+test("the chat search keeps matching titles, ignoring case", () => {
+  const chats = [{ title: "US SEO keyword research" }, { title: "Potato keyword research" }, { title: "Greeting" }]
+  expect(filterChats(chats, "")).toHaveLength(3)
+  expect(filterChats(chats, "  KEYWORD ").map((c) => c.title)).toEqual(["US SEO keyword research", "Potato keyword research"])
+  expect(filterChats(chats, "audit")).toEqual([])
+})
+
+async function open(width: number, height: number, inspect: (setup: Awaited<ReturnType<typeof createTestRenderer>>) => Promise<void>) {
+  await using state = await tmpdir()
+  const setup = await createTestRenderer({ width, height, kittyKeyboard: true })
+  await setup.renderer.setupTerminal()
+  setup.renderer.start()
+  const base = {
+    projectID: "proj_test",
+    location: { directory },
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    time: { created: 0, updated: 0 },
+  }
+  const sessions = [
+    { ...base, id: "ses_kw", title: "US SEO keyword research" },
+    { ...base, id: "ses_potato", title: "Potato keyword research" },
+    { ...base, id: "ses_hi", title: "Greeting" },
+  ]
+  await mkdir(`${state.path}/test/tui`, { recursive: true })
+  await Bun.write(
+    `${state.path}/test/tui/tabs.json`,
+    JSON.stringify({ global: { tabs: sessions.map((s) => ({ sessionID: s.id, title: s.title })), unread: {} }, cwd: {} }),
+  )
+  const calls = createFetch((url) => {
+    if (url.pathname === "/api/session") return json({ data: sessions, cursor: {} })
+    for (const s of sessions) {
+      if (url.pathname === `/api/session/${s.id}`) return json({ data: s })
+      if (url.pathname === `/api/session/${s.id}/message`)
+        return json({
+          data: [{ type: "user", id: `msg_${s.id}`, text: `Question in ${s.title}`, time: { created: 0 } }],
+          cursor: {},
+        })
+      if (url.pathname === `/api/session/${s.id}/inbox` || url.pathname === `/api/session/${s.id}/permission`)
+        return json({ data: [] })
+    }
+  }, createEventStream())
+  const server = Bun.serve({ port: 0, idleTimeout: 0, fetch: (request) => calls.fetch(request) })
+  const { run } = await import("../src/app")
+  const task = Effect.runPromise(
+    run({
+      app: { name: "test", version: "test", channel: "test" },
+      server: { endpoint: { url: server.url.toString() } },
+      config: {
+        get: async () => ({ animations: false, tabs: { enabled: true, scope: "global" } }),
+        update: async () => ({}),
+      },
+      packages: { prepare: async () => ({ directory: "" }) },
+      args: { sessionID: "ses_kw" },
+      terminalHandoff: async () => ({ renderer: setup.renderer, mode: "dark", complete: () => {} }),
+      log: () => {},
+    }).pipe(Effect.provide(Global.layerWith({ state: state.path })), Effect.provide(FileSystem.layerNoop({}))),
+  )
+  try {
+    await waitForHighlightedFrame(setup, (frame) => frame.includes("Question in US SEO keyword research"))
+    await setup.waitForVisualIdle({ quietFrames: 3 })
+    await inspect(setup)
+  } finally {
+    setup.renderer.destroy()
+    await task
+    await server.stop()
+  }
+}
+
+const shots = process.env.CHAT_SIDEBAR_SNAPSHOTS
+
+test("a wide terminal opens the chat sidebar on the left; « folds it and » brings it back", async () => {
+  await open(160, 45, async (setup) => {
+    const frame = setup.captureCharFrame()
+    if (shots) await Bun.write(`${shots}/sidebar-160x45.txt`, frame)
+    const lines = frame.split("\n")
+    expect(frame).toContain("New chat")
+    expect(frame).toContain("Search chats")
+    expect(frame).toContain("DataForSEO")
+    // The chats sit on the left, and the tab strip is gone: each title shows once, in the list.
+    const potato = lines.find((line) => line.includes("Potato keyword research"))!
+    expect(potato.indexOf("Potato keyword research")).toBeLessThan(42)
+    expect(frame.split("Potato keyword research").length - 1).toBe(1)
+    const fold = lines.findIndex((line) => line.includes("«"))
+    await setup.mockMouse.click(lines[fold].indexOf("«"), fold)
+    await waitForHighlightedFrame(setup, (next) => !next.includes("New chat"))
+    const folded = setup.captureCharFrame()
+    if (shots) await Bun.write(`${shots}/sidebar-160x45-folded.txt`, folded)
+    expect(folded.split("\n")[0].startsWith("»")).toBe(true)
+    await setup.mockMouse.click(0, 0)
+    await waitForHighlightedFrame(setup, (next) => next.includes("New chat"))
+  })
+}, 20000)
+
+test("a narrow terminal starts with the sidebar folded and the chat at full width", async () => {
+  await open(100, 40, async (setup) => {
+    const frame = setup.captureCharFrame()
+    if (shots) await Bun.write(`${shots}/sidebar-100x40.txt`, frame)
+    expect(frame).not.toContain("New chat")
+    expect(frame.split("\n")[0].startsWith("»")).toBe(true)
+    // Unfolded on a narrow screen, it opens over the chat.
+    await setup.mockMouse.click(0, 0)
+    await waitForHighlightedFrame(setup, (next) => next.includes("New chat"))
+    if (shots) await Bun.write(`${shots}/sidebar-100x40-open.txt`, setup.captureCharFrame())
+  })
+}, 20000)
+
+test("clicking a chat in the list switches to it", async () => {
+  await open(160, 45, async (setup) => {
+    const lines = setup.captureCharFrame().split("\n")
+    const row = lines.findIndex((line) => line.indexOf("Greeting") >= 0 && line.indexOf("Greeting") < 42)
+    await setup.mockMouse.click(lines[row].indexOf("Greeting"), row)
+    await waitForHighlightedFrame(setup, (frame) => frame.includes("Question in Greeting"))
+  })
+}, 20000)

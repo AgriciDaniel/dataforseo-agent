@@ -16,6 +16,8 @@ import { usePathFormatter } from "../../context/path-format"
 import { SimulationSemantics } from "../../simulation/semantics"
 import { PatchDiff } from "../../component/patch-diff"
 import { useToast } from "../../ui/toast"
+import { ApprovalCrew } from "../../component/approval-crew"
+import { isDataForSEOAction, rootSession, setChatAutoAllowed } from "../../util/chat-auto-allow"
 
 type PermissionStage = "permission" | "reject"
 
@@ -132,6 +134,9 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
   })
 
   const theme = useTheme()
+  const size = useTerminalDimensions()
+  /** A DataForSEO call: the paid ones are the ones that ask. */
+  const paid = () => isDataForSEOAction(props.request.action)
 
   function reply(value: PermissionReply, message?: string) {
     void data.session.permission
@@ -229,8 +234,17 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
                   </box>
                 </Show>
               )}
+              lead={paid() && size().width >= 100 ? <ApprovalCrew /> : undefined}
+              hotkeys={paid() ? { once: "y", chat: "a", reject: "n" } : undefined}
               options={
-                props.request.save?.length
+                paid()
+                  ? {
+                      once: "Accept",
+                      chat: "Allow all in chat",
+                      ...(props.request.save?.length ? { always: "Always this endpoint" } : {}),
+                      reject: "Deny",
+                    }
+                  : props.request.save?.length
                   ? {
                       once: permissionOptionLabel("once"),
                       always: permissionOptionLabel("always"),
@@ -241,6 +255,15 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               escapeKey="reject"
               fullscreen
               onSelect={(option) => {
+                if (option === "chat") {
+                  // Auto-allow the rest of this chat's DataForSEO calls (the budget still applies), then this one.
+                  setChatAutoAllowed(
+                    rootSession(props.request.sessionID, (id) => data.session.get(id)?.parentID),
+                    true,
+                  )
+                  reply("once")
+                  return
+                }
                 if (option === "always") {
                   reply("always")
                   return
@@ -416,6 +439,10 @@ export function SessionQuestion<const T extends Record<string, string>>(props: {
   options: T
   escapeKey?: keyof T
   fullscreen?: boolean
+  /** Drawn before the choices, such as the bots pointing at Accept. */
+  lead?: JSX.Element
+  /** Single keys that pick a choice straight away, such as y for Accept and n for Deny. */
+  hotkeys?: Partial<Record<keyof T, string>>
   onSelect: (option: keyof T) => void
 }) {
   const theme = useTheme()
@@ -484,6 +511,9 @@ export function SessionQuestion<const T extends Record<string, string>>(props: {
             },
           ]
         : []),
+      ...Object.entries(props.hotkeys ?? {}).flatMap(([option, key]) =>
+        key ? [{ bind: key as string, title: `Choose ${props.options[option as keyof T]}`, group: group(), run: () => props.onSelect(option as keyof T) }] : [],
+      ),
       {
         bind: "return",
         title: "Select option",
@@ -550,6 +580,8 @@ export function SessionQuestion<const T extends Record<string, string>>(props: {
         justifyContent={narrow() ? "flex-start" : "space-between"}
         alignItems={narrow() ? "flex-start" : "center"}
       >
+        <box flexDirection="row" gap={1} flexShrink={0} alignItems="center">
+        <Show when={props.lead}>{props.lead}</Show>
         <box
           id={`${id()}.actions`}
           ref={SimulationSemantics.bind(() => ({
@@ -590,25 +622,32 @@ export function SessionQuestion<const T extends Record<string, string>>(props: {
                   fg={option === store.selected ? theme.text.action.primary.focused : theme.text.action.primary.base}
                 >
                   {props.options[option]}
+                  <Show when={props.hotkeys?.[option]}>
+                    {(key) => <span style={{ fg: theme.text.muted }}>{` ${key()}`}</span>}
+                  </Show>
                 </text>
               </box>
             )}
           </For>
         </box>
+        </box>
         <box flexDirection="row" gap={2} flexShrink={0}>
-          <Show when={props.fullscreen}>
+          <Show when={props.fullscreen && (!props.hotkeys || dimensions().width >= 130)}>
             <text fg={theme.text.base}>
               {shortcuts.get("permission.prompt.fullscreen")} <span style={{ fg: theme.text.muted }}>{hint()}</span>
             </text>
           </Show>
-          <Show when={keys.length > 1}>
+          {/* With a key on every button, the select and confirm hints only crowd the row. */}
+          <Show when={!props.hotkeys}>
+            <Show when={keys.length > 1}>
+              <text fg={theme.text.base}>
+                {"⇆"} <span style={{ fg: theme.text.muted }}>select</span>
+              </text>
+            </Show>
             <text fg={theme.text.base}>
-              {"⇆"} <span style={{ fg: theme.text.muted }}>select</span>
+              enter <span style={{ fg: theme.text.muted }}>confirm</span>
             </text>
           </Show>
-          <text fg={theme.text.base}>
-            enter <span style={{ fg: theme.text.muted }}>confirm</span>
-          </text>
         </box>
       </box>
     </box>

@@ -98,6 +98,8 @@ test.each([
           get: async () => ({
             animations: false,
             tabs: { enabled: true, scope: "global" },
+            // The chat sidebar opens at 120 columns; this test measures the transcript at the full width.
+            session: { sidebar: "hide" },
             keybinds: { "session.messages_last_user": "ctrl+shift+u", "session.message.next": "ctrl+shift+n" },
           }),
           update: async () => ({}),

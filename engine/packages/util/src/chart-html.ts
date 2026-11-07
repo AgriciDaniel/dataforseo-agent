@@ -1,11 +1,45 @@
 // DataForSEO Agent: a self-contained HTML report of chart specs. Each chart is drawn as inline SVG
 // with its data table under it, so the file can be shared, opened offline and printed.
-import { asTable, formatNumber, ordered, stateCode, validate, type Series, type Spec } from "./chart.js"
+import {
+  asTable,
+  formatNumber,
+  gaugeScores,
+  intentPill,
+  isDifficulty,
+  trendChange,
+  isRank,
+  niceAxis,
+  ordered,
+  overlapRegions,
+  percentText,
+  rankText,
+  stateCode,
+  validate,
+  type Series,
+  type Spec,
+} from "./chart.js"
 
 const PALETTE = ["#2862A8", "#137A74", "#C9962B", "#6B8E23", "#7E57C2", "#C0504D"]
 const GOOD = "#2E8B57"
 const BAD = "#C0504D"
 const num = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v)
+
+// Keyword difficulty tiers and colors, as open-seo draws them (MIT, every-app/open-seo).
+const KD = [
+  { max: 20, color: "#10b981", label: "Easy 0-20" },
+  { max: 35, color: "#84cc16", label: "21-35" },
+  { max: 50, color: "#eab308", label: "36-50" },
+  { max: 65, color: "#f97316", label: "51-65" },
+  { max: 80, color: "#ef4444", label: "66-80" },
+  { max: 101, color: "#b91c1c", label: "Very hard 81+" },
+]
+const kdColor = (v: number) => KD.find((tier) => v <= tier.max)!.color
+const INTENT: Record<string, { color: string; tip: string }> = {
+  Info: { color: "#2563eb", tip: "Informational: people want to learn. Fits guides and how-tos." },
+  Comm: { color: "#d97706", tip: "Commercial: people compare options. Fits reviews and comparisons." },
+  Trans: { color: "#16a34a", tip: "Transactional: people are ready to act. Fits product and pricing pages." },
+  Nav: { color: "#7c3aed", tip: "Navigational: people want a specific site." },
+}
 
 export function escapeHtml(text: unknown): string {
   return String(text ?? "").replace(
@@ -16,8 +50,9 @@ export function escapeHtml(text: unknown): string {
 
 const W = 760
 const fmt = (v: number | null | undefined, unit?: string) => escapeHtml(formatNumber(v, unit))
+// On a phone a chart keeps a readable minimum width and scrolls sideways instead of shrinking its text.
 const svg = (h: number, body: string) =>
-  `<svg viewBox="0 0 ${W} ${h}" width="100%" role="img" xmlns="http://www.w3.org/2000/svg">${body}</svg>`
+  `<div class="plot"><svg viewBox="0 0 ${W} ${h}" width="100%" role="img" xmlns="http://www.w3.org/2000/svg">${body}</svg></div>`
 const text = (x: number, y: number, t: string, attrs = "") =>
   `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" ${attrs}>${escapeHtml(t)}</text>`
 const legend = (series: readonly Series[]) =>
@@ -33,12 +68,17 @@ function bars(spec: Spec, grouped: boolean) {
   const { x, series } = ordered(spec)
   const shown = grouped ? series : series.slice(0, 1)
   const values = shown.flatMap((s) => s.values.filter(num) as number[])
+  // Ranks: position 1 gets the longest bar, so the longest bar is always the winner.
+  const rank = isRank(spec, shown)
+  const worst = Math.max(1, ...values)
   const positive = values.filter((v) => v > 0)
   const logScale =
-    spec.log === true ||
-    ((spec.log === undefined || spec.log === "auto") && positive.length > 1 && Math.max(...positive) / Math.min(...positive) >= 1000)
+    !rank &&
+    (spec.log === true ||
+      ((spec.log === undefined || spec.log === "auto") && positive.length > 1 && Math.max(...positive) / Math.min(...positive) >= 1000))
   const floor = positive.length ? Math.min(...positive) : 1
-  const scaled = (v: number) => (logScale ? (v > 0 ? Math.log10(v) - Math.log10(floor) + 0.3 : 0) : Math.max(0, v))
+  const scaled = (v: number) =>
+    rank ? (v > 0 ? worst + 1 - v : 0) : logScale ? (v > 0 ? Math.log10(v) - Math.log10(floor) + 0.3 : 0) : Math.max(0, v)
   const max = Math.max(0, ...values.map(scaled)) || 1
   const label = 190
   const barH = grouped ? 12 : 18
@@ -50,14 +90,22 @@ function bars(spec: Spec, grouped: boolean) {
     body += text(label - 8, y0 + (barH * shown.length) / 2 + 4, cut(name, 30), `text-anchor="end" class="lbl"`)
     shown.forEach((s, j) => {
       const v = s.values[r]
-      if (!num(v)) return
-      const w = Math.max(1, (scaled(v) / max) * plot)
       const y = y0 + j * barH
-      body += `<rect x="${label}" y="${y}" width="${w.toFixed(1)}" height="${barH - 2}" rx="2" fill="${PALETTE[j % PALETTE.length]}"/>`
-      body += text(label + w + 6, y + barH - 5, formatNumber(v, spec.unit), `class="val"`)
+      if (!num(v)) {
+        if (rank) body += text(label + 6, y + barH - 5, "not ranking", `class="val"`)
+        return
+      }
+      const w = Math.max(1, (scaled(v) / max) * plot)
+      const shown = rank ? rankText(v) : formatNumber(v, spec.unit)
+      body += `<rect x="${label}" y="${y}" width="${w.toFixed(1)}" height="${barH - 2}" rx="2" fill="${PALETTE[j % PALETTE.length]}"><title>${escapeHtml(name)}${grouped ? `, ${escapeHtml(s.name)}` : ""}: ${escapeHtml(shown)}</title></rect>`
+      body += text(label + w + 6, y + barH - 5, shown, `class="val"`)
     })
   })
-  const note = logScale ? `<div class="axisnote">Log scale: values span more than 1000x.</div>` : ""
+  const note = logScale
+    ? `<div class="axisnote">Log scale: values span more than 1000x.</div>`
+    : rank
+      ? `<div class="axisnote">Longer bar = better rank (#1 is best).</div>`
+      : ""
   return svg(x.length * rowH + 8, body) + note + (grouped ? legend(shown) : "")
 }
 
@@ -75,7 +123,10 @@ function shareBar(spec: Spec) {
   const items = x
     .map(
       (name, i) =>
-        `<span><i style="background:${PALETTE[i % PALETTE.length]}"></i>${escapeHtml(name)} <b>${((values[i] / total) * 100).toFixed(1)}%</b> (${fmt(values[i], spec.unit)})</span>`,
+        `<span><i style="background:${PALETTE[i % PALETTE.length]}"></i>${escapeHtml(name)} ${
+          // Values given as percents are shown as given; counts get their share and the count.
+          spec.unit === "%" ? `<b>${fmt(values[i], "%")}</b>` : `<b>${percentText(values[i], total)}</b> (${fmt(values[i], spec.unit)})`
+        }</span>`,
     )
     .join("")
   return svg(34, body) + `<div class="legend">${items}</div>`
@@ -86,14 +137,19 @@ function diverging(spec: Spec) {
   const [up, down] = spec.series ?? []
   const ups = (up?.values ?? []).map((v) => (num(v) ? Math.abs(v) : 0))
   const downs = (down?.values ?? []).map((v) => (num(v) ? Math.abs(v) : 0))
-  const max = Math.max(1, ...ups, ...downs)
-  const H = 260
-  const mid = H / 2
+  const max = niceAxis(0, Math.max(1, ...ups, ...downs)).hi
+  const H = 280
+  const mid = (H - 20) / 2
   const step = (W - 110) / Math.max(1, x.length)
   const bw = Math.max(2, step * 0.7)
   let body = `<line x1="100" x2="${W}" y1="${mid}" y2="${mid}" class="axis"/>`
   body += text(94, 14, formatNumber(max, spec.unit), `text-anchor="end" class="val"`)
-  body += text(94, H - 4, "-" + formatNumber(max, spec.unit), `text-anchor="end" class="val"`)
+  body += text(94, H - 24, "-" + formatNumber(max, spec.unit), `text-anchor="end" class="val"`)
+  // A label under each bar, or every 2nd, 3rd... when they would collide.
+  const every = Math.max(1, Math.ceil((x.length * 7 * Math.max(...x.map((l) => String(l).length), 3)) / (W - 110)))
+  x.forEach((label, i) => {
+    if (i % every === 0) body += text(105 + i * step + bw / 2, H - 4, cut(String(label), 12), `text-anchor="middle" class="val"`)
+  })
   x.forEach((label, i) => {
     const cx = 105 + i * step
     const hu = (ups[i] / max) * (mid - 8)
@@ -102,10 +158,8 @@ function diverging(spec: Spec) {
     body += `<rect x="${cx.toFixed(1)}" y="${mid}" width="${bw.toFixed(1)}" height="${hd.toFixed(1)}" fill="${BAD}"><title>${escapeHtml(label)}: -${downs[i]}</title></rect>`
   })
   const sum = (a: number[]) => a.reduce((p, c) => p + c, 0)
-  const ends = x.length ? `<div class="axisnote">${escapeHtml(x[0])} to ${escapeHtml(x[x.length - 1])}</div>` : ""
   return (
     svg(H, body) +
-    ends +
     `<div class="legend"><span><i style="background:${GOOD}"></i>${escapeHtml(up?.name ?? "")} <b>${fmt(sum(ups))}</b></span><span><i style="background:${BAD}"></i>${escapeHtml(down?.name ?? "")} <b>${fmt(sum(downs))}</b></span></div>`
   )
 }
@@ -121,13 +175,29 @@ function line(spec: Spec) {
     (spec.log === true || ((spec.log === undefined || spec.log === "auto") && Math.max(...raw) / Math.min(...raw) >= 1000))
   const f = (v: number) => (logScale ? Math.log10(v) : v)
   const all = raw.map(f)
+  const invert = series.length > 0 && isRank(spec, series)
   let lo = Math.min(...all)
   let hi = Math.max(...all)
-  if (lo === hi) {
-    lo -= 1
-    hi += 1
+  let ticks: number[]
+  if (logScale) {
+    if (lo === hi) {
+      lo -= 1
+      hi += 1
+    }
+    ticks = [lo, (lo + hi) / 2, hi]
+  } else if (invert) {
+    const axis = niceAxis(0, Math.max(2, hi))
+    lo = 1
+    hi = axis.hi
+    ticks = [1, axis.mid, axis.hi]
+  } else {
+    const axis = niceAxis(lo, hi)
+    lo = lo >= 0 ? Math.max(0, axis.lo) : axis.lo
+    hi = axis.hi
+    // A gridline at every step.
+    ticks = []
+    for (let t = lo; t <= hi + 1e-9; t += axis.step) ticks.push(t)
   }
-  const invert = series.length > 0 && series.every((s) => s.lower_is_better)
   const H = 260
   const left = 100
   const top = 10
@@ -139,74 +209,173 @@ function line(spec: Spec) {
     const t = (v - lo) / (hi - lo)
     return top + (invert ? t : 1 - t) * ph
   }
-  let body = `<line x1="${left}" x2="${left}" y1="${top}" y2="${top + ph}" class="axis"/><line x1="${left}" x2="${W - 10}" y1="${top + ph}" y2="${top + ph}" class="axis"/>`
-  for (const t of [lo, (lo + hi) / 2, hi]) {
+  let body = ""
+  for (const t of ticks) {
     const v = logScale ? 10 ** t : t
-    body += text(left - 6, py(v) + 4, formatNumber(v, spec.unit), `text-anchor="end" class="val"`)
+    // Dashed horizontal grid at each tick, no axis lines (open-seo's chart chrome).
+    body += `<line x1="${left}" x2="${W - 10}" y1="${py(v).toFixed(1)}" y2="${py(v).toFixed(1)}" class="grid"/>`
+    body += text(left - 6, py(v) + 4, invert ? rankText(v) : formatNumber(v, spec.unit), `text-anchor="end" class="val"`)
   }
-  const ticks = Math.min(x.length, 8)
-  for (let k = 0; k < ticks; k++) {
-    const i = Math.round((k / Math.max(1, ticks - 1)) * (x.length - 1))
-    const anchor = k === 0 ? "start" : k === ticks - 1 ? "end" : "middle"
+  // Evenly spaced x labels: every one when they fit, else every 2nd, 3rd...
+  const every = Math.max(1, Math.ceil(x.length / 8))
+  for (let i = 0; i < x.length; i += every) {
+    const anchor = i === 0 ? "start" : i === x.length - 1 ? "end" : "middle"
     body += text(px(i), H - 8, cut(String(x[i]), 12), `text-anchor="${anchor}" class="val"`)
   }
   series.forEach((s, j) => {
     const pts = s.values.map((v, i) => (num(v) ? `${px(i).toFixed(1)},${py(v).toFixed(1)}` : "")).filter(Boolean)
-    body += `<polyline fill="none" stroke="${PALETTE[j % PALETTE.length]}" stroke-width="2" points="${pts.join(" ")}"/>`
+    // One series gets a soft gradient area under its line.
+    if (series.length === 1 && !invert && pts.length > 1) {
+      const first = pts[0].split(",")[0]
+      const last = pts[pts.length - 1].split(",")[0]
+      body += `<defs><linearGradient id="area${sparkId}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${PALETTE[0]}" stop-opacity="0.28"/><stop offset="1" stop-color="${PALETTE[0]}" stop-opacity="0.03"/></linearGradient></defs>`
+      body += `<polygon fill="url(#area${sparkId++})" points="${first},${top + ph} ${pts.join(" ")} ${last},${top + ph}"/>`
+    }
+    body += `<polyline fill="none" stroke="${PALETTE[j % PALETTE.length]}" stroke-width="2.25" stroke-linejoin="round" points="${pts.join(" ")}"/>`
+    // A dot per point, with its value on hover.
+    s.values.forEach((v, i) => {
+      if (num(v))
+        body += `<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="3" fill="${PALETTE[j % PALETTE.length]}"><title>${escapeHtml(s.name)}, ${escapeHtml(String(x[i] ?? ""))}: ${escapeHtml(invert ? rankText(v) : formatNumber(v, spec.unit))}</title></circle>`
+    })
   })
   const note =
-    (invert ? `<div class="axisnote">Axis inverted: lower is better, so up is an improvement.</div>` : "") +
+    (invert ? `<div class="axisnote">Rank axis: #1 at the top, so up is an improvement.</div>` : "") +
     (logScale ? `<div class="axisnote">Log scale: values span more than 1000x.</div>` : "")
   return svg(H, body) + note + (series.length > 1 ? legend(series) : "")
 }
 
+let sparkId = 0
+// A small area trend: last 12 values, gradient fill, a dot on the last point, the change after it.
 function spark(values: readonly unknown[], color: string, invert = false) {
-  const v = values.filter(num) as number[]
-  if (v.length < 2) return ""
+  const v = (values.filter(num) as number[]).slice(-12)
+  if (v.length < 2 || v.every((n) => n === 0)) return "-"
   const lo = Math.min(...v)
   const hi = Math.max(...v)
-  const pts = v
-    .map((n, i) => {
-      const t = hi === lo ? 0.5 : (n - lo) / (hi - lo)
-      return `${((i / (v.length - 1)) * 96 + 2).toFixed(1)},${(2 + (invert ? t : 1 - t) * 18).toFixed(1)}`
-    })
-    .join(" ")
-  return `<svg viewBox="0 0 100 22" width="100" height="22"><polyline fill="none" stroke="${color}" stroke-width="1.5" points="${pts}"/></svg>`
+  const pts = v.map((n, i) => {
+    const t = hi === lo ? 0.5 : (n - lo) / (hi - lo)
+    return [(i / (v.length - 1)) * 76 + 2, 3 + (invert ? t : 1 - t) * 16] as const
+  })
+  const change = trendChange(v)
+  const up = change !== undefined && change > 0 !== invert
+  const tone = change === undefined || Math.abs(change) < 5 ? "#94a3b8" : up ? "#16a34a" : "#d55e00"
+  const stroke = change === undefined || Math.abs(change) < 5 ? color : tone
+  const id = `sg${sparkId++}`
+  const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ")
+  const [lx, ly] = pts[pts.length - 1]
+  const arrow = change === undefined ? "" : Math.abs(change) < 5 ? "→" : `${change > 0 ? "↑" : "↓"}${Math.round(Math.abs(change))}%`
+  return `<span class="trend"><svg viewBox="0 0 80 22" width="80" height="22"><title>${v.map((n) => formatNumber(n)).join(", ")}</title><defs><linearGradient id="${id}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${stroke}" stop-opacity="0.32"/><stop offset="1" stop-color="${stroke}" stop-opacity="0.05"/></linearGradient></defs><polygon fill="url(#${id})" points="2,21 ${line} 78,21"/><polyline fill="none" stroke="${stroke}" stroke-width="1.5" stroke-linejoin="round" points="${line}"/><circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="2" fill="${stroke}"/></svg><b style="color:${tone}">${arrow}</b></span>`
 }
 
 function scatter(spec: Spec) {
   const series = spec.series ?? []
   const pts = series.flatMap((s, j) =>
-    (s.values as unknown[]).filter((p): p is [number, number] => Array.isArray(p) && num(p[0]) && num(p[1])).map((p) => ({ p, j })),
+    (s.values as unknown[])
+      .map((p, i) => ({ p, j, name: s.labels?.[i] }))
+      .filter((d): d is { p: [number, number]; j: number; name: string | undefined } => Array.isArray(d.p) && num(d.p[0]) && num(d.p[1])),
   )
   if (pts.length === 0) return ""
-  const axis = (vals: number[]) => {
+  // Round axes: powers of ten on a log axis (volume spans 100x or more), plain round numbers otherwise.
+  const axis = (vals: number[], label?: string, other?: string) => {
     const pos = vals.filter((v) => v > 0)
     const log =
       spec.log === true ||
-      ((spec.log === undefined || spec.log === "auto") && pos.length === vals.length && pos.length > 1 && Math.max(...pos) / Math.min(...pos) >= 1000)
-    const f = (v: number) => (log ? Math.log10(Math.max(v, 1e-9)) : v)
-    const lo = Math.min(...vals.map(f))
-    const hi = Math.max(...vals.map(f))
-    return { log, scale: (v: number) => (hi === lo ? 0.5 : (f(v) - lo) / (hi - lo)), lo: Math.min(...vals), hi: Math.max(...vals) }
+      ((spec.log === undefined || spec.log === "auto") &&
+        !isDifficulty(label) &&
+        pos.length === vals.length &&
+        pos.length > 1 &&
+        Math.max(...pos) / Math.min(...pos) >= (isDifficulty(other) ? 20 : 100))
+    if (log) {
+      const lo = Math.floor(Math.log10(Math.min(...pos)) + 1e-9)
+      const hi = Math.max(lo + 1, Math.ceil(Math.log10(Math.max(...pos)) - 1e-9))
+      const ticks = Array.from({ length: hi - lo + 1 }, (_, k) => 10 ** (lo + k))
+      return { log, ticks, scale: (v: number) => (Math.log10(Math.max(v, 1e-9)) - lo) / (hi - lo) }
+    }
+    const nice = niceAxis(Math.min(...vals), Math.max(...vals))
+    const lo = Math.min(...vals) >= 0 ? Math.max(0, nice.lo) : nice.lo
+    const ticks: number[] = []
+    for (let t = lo; t <= nice.hi + 1e-9; t += nice.step) ticks.push(t)
+    return { log, ticks, scale: (v: number) => (nice.hi === lo ? 0.5 : (v - lo) / (nice.hi - lo)) }
   }
-  const ax = axis(pts.map((d) => d.p[0]))
-  const ay = axis(pts.map((d) => d.p[1]))
-  const H = 300
-  const left = 100
-  const ph = H - 50
+  const ax = axis(pts.map((d) => d.p[0]), spec.x_label, spec.y_label)
+  const ay = axis(pts.map((d) => d.p[1]), spec.y_label, spec.x_label)
+  const kdX = isDifficulty(spec.x_label)
+  const kdY = !kdX && isDifficulty(spec.y_label)
+  const H = 320
+  const left = 70
+  const top = 12
+  const ph = H - 60
   const pw = W - left - 20
-  let body = `<line x1="${left}" x2="${left}" y1="10" y2="${10 + ph}" class="axis"/><line x1="${left}" x2="${W - 20}" y1="${10 + ph}" y2="${10 + ph}" class="axis"/>`
-  pts.forEach(({ p, j }) => {
-    body += `<circle cx="${(left + ax.scale(p[0]) * pw).toFixed(1)}" cy="${(10 + (1 - ay.scale(p[1])) * ph).toFixed(1)}" r="4" fill="${PALETTE[j % PALETTE.length]}" fill-opacity="0.8"><title>${p[0]}, ${p[1]}</title></circle>`
+  const X = (v: number) => left + ax.scale(v) * pw
+  const Y = (v: number) => top + (1 - ay.scale(v)) * ph
+  let body = ""
+  // Difficulty bands behind the points, easy (green) to very hard (dark red), each labelled.
+  if (kdX && !ax.log) {
+    let from = 0
+    KD.forEach((tier) => {
+      const to = Math.min(100, tier.max)
+      const x0 = X(from)
+      const x1 = X(Math.min(to, 100))
+      if (x1 > x0) {
+        body += `<rect x="${x0.toFixed(1)}" y="${top}" width="${(x1 - x0).toFixed(1)}" height="${ph}" fill="${tier.color}" fill-opacity="0.07"/>`
+        body += `<rect x="${x0.toFixed(1)}" y="${top + ph}" width="${(x1 - x0).toFixed(1)}" height="4" fill="${tier.color}"/>`
+      }
+      from = to
+    })
+  }
+  // Grid: dashed horizontal lines at each y tick, no axis lines.
+  ay.ticks.forEach((t) => {
+    body += `<line x1="${left}" x2="${left + pw}" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" class="grid"/>`
+    body += text(left - 6, Y(t) + 4, formatNumber(t), `text-anchor="end" class="val"`)
   })
-  body += text(left - 6, 18, formatNumber(ay.hi), `text-anchor="end" class="val"`)
-  body += text(left - 6, 10 + ph, formatNumber(ay.lo), `text-anchor="end" class="val"`)
-  body += text(left, H - 22, formatNumber(ax.lo), `class="val"`)
-  body += text(W - 20, H - 22, formatNumber(ax.hi), `text-anchor="end" class="val"`)
-  body += text(left + pw / 2, H - 4, `${spec.x_label ?? "x"}${ax.log ? " (log)" : ""}`, `text-anchor="middle" class="lbl"`)
-  body += text(14, 10 + ph / 2, `${spec.y_label ?? "y"}${ay.log ? " (log)" : ""}`, `text-anchor="middle" class="lbl" transform="rotate(-90 14 ${10 + ph / 2})"`)
-  return svg(H, body) + (series.length > 1 ? legend(series) : "")
+  ax.ticks.forEach((t) => (body += text(X(t), top + ph + 18, formatNumber(t), `text-anchor="middle" class="val"`)))
+  // The opportunity zone: easy difficulty (KD 35 or less) with above median demand.
+  const kdOf = (d: { p: [number, number] }) => (kdX ? d.p[0] : kdY ? d.p[1] : undefined)
+  const demandOf = (d: { p: [number, number] }) => (kdX ? d.p[1] : d.p[0])
+  if (kdX && !ax.log) {
+    const demand = pts.map(demandOf).sort((a, b) => a - b)
+    const median = demand[Math.floor(demand.length / 2)]
+    body += `<rect class="zone" x="${X(0).toFixed(1)}" y="${top}" width="${(X(35) - X(0)).toFixed(1)}" height="${(Y(median) - top).toFixed(1)}" rx="4"/>`
+    body += text(X(0) + 6, top + 14, "Opportunity: easy and in demand", `class="val" style="fill:#10b981;font-weight:600"`)
+  }
+  // Points: difficulty tier color when an axis is difficulty; names on the 8 largest.
+  const labelled = new Set([...pts].sort((a, b) => demandOf(b) - demandOf(a)).slice(0, 8))
+  // Label boxes placed so far (and every point), so labels never sit on each other or on a dot.
+  const boxes: [number, number, number, number][] = pts.map((d) => [X(d.p[0]) - 6, Y(d.p[1]) - 6, X(d.p[0]) + 6, Y(d.p[1]) + 6])
+  const free = (b: [number, number, number, number], own: number) =>
+    b[0] >= left && b[2] <= left + pw && boxes.every((o, k) => k === own || b[2] <= o[0] || b[0] >= o[2] || b[3] <= o[1] || b[1] >= o[3])
+  pts.forEach((d, index) => {
+    const kd = kdOf(d)
+    const color = kd !== undefined ? kdColor(kd) : PALETTE[d.j % PALETTE.length]
+    const cx = X(d.p[0])
+    const cy = Y(d.p[1])
+    const tip = `${d.name ?? series[d.j].name}: ${spec.x_label ?? "x"} ${formatNumber(d.p[0])}, ${spec.y_label ?? "y"} ${formatNumber(d.p[1])}`
+    body += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5.5" fill="${color}" fill-opacity="0.85" stroke="var(--card)" stroke-width="1.5"><title>${escapeHtml(tip)}</title></circle>`
+    if (d.name && labelled.has(d)) {
+      const name = cut(d.name, 24)
+      const w = name.length * 6.2
+      // Try right of the dot, then left, then above, then below; skip the label if none is free.
+      const spots: [number, number, "start" | "end" | "middle", [number, number, number, number]][] = [
+        [cx + 9, cy + 4, "start", [cx + 8, cy - 7, cx + 10 + w, cy + 6]],
+        [cx - 9, cy + 4, "end", [cx - 10 - w, cy - 7, cx - 8, cy + 6]],
+        [cx, cy - 10, "middle", [cx - w / 2, cy - 21, cx + w / 2, cy - 8]],
+        [cx, cy + 18, "middle", [cx - w / 2, cy + 7, cx + w / 2, cy + 20]],
+      ]
+      const spot = spots.find((sp) => free(sp[3], index))
+      if (spot) {
+        boxes.push(spot[3])
+        body += text(spot[0], spot[1], name, `class="lbl pt" text-anchor="${spot[2]}"`)
+      }
+    }
+  })
+  body += text(left + pw / 2, H - 6, `${spec.x_label ?? "x"}${ax.log ? " (log)" : ""}`, `text-anchor="middle" class="lbl"`)
+  body += text(14, top + ph / 2, `${spec.y_label ?? "y"}${ay.log ? " (log)" : ""}`, `text-anchor="middle" class="lbl" transform="rotate(-90 14 ${top + ph / 2})"`)
+  const key =
+    kdX || kdY
+      ? `<div class="legend">${KD.map((tier) => `<span><i style="background:${tier.color}"></i>KD ${tier.label}</span>`).join("")}</div>`
+      : series.length > 1
+        ? legend(series)
+        : ""
+  return svg(H, body) + key
 }
 
 function heatmap(spec: Spec) {
@@ -291,6 +460,147 @@ function tilemap(spec: Spec) {
   return `<div class="geo us">${tiles}</div><div class="axisnote">${fmt(s?.lower_is_better ? hi : lo, spec.unit)} light to ${fmt(s?.lower_is_better ? lo : hi, spec.unit)} dark${s?.name ? `, ${escapeHtml(s.name)}` : ""}</div>`
 }
 
+// Rank buckets from best to worst: green through amber to red, one distinct shade per bucket.
+const AMBER = "#E0A030"
+const bucketColor = (i: number, n: number) => {
+  const t = n <= 1 ? 0 : i / (n - 1)
+  return t <= 0.5
+    ? `color-mix(in srgb, ${AMBER} ${Math.round(t * 200)}%, ${GOOD})`
+    : `color-mix(in srgb, ${BAD} ${Math.round((t - 0.5) * 200)}%, ${AMBER})`
+}
+
+function distribution(spec: Spec) {
+  const x = spec.x ?? []
+  const series = spec.series ?? []
+  const label = 150
+  const rowH = 30
+  const plot = W - label - 80
+  let body = ""
+  series.forEach((s, r) => {
+    const values = s.values.map((v) => (num(v) && v > 0 ? v : 0))
+    const total = values.reduce((a, b) => a + b, 0) || 1
+    const y = r * rowH + 4
+    body += text(label - 8, y + 16, cut(s.name, 22), `text-anchor="end" class="lbl"`)
+    let at = label
+    values.forEach((v, i) => {
+      const w = (v / total) * plot
+      if (w <= 0) return
+      body += `<rect x="${at.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="22" fill="${bucketColor(i, x.length)}"><title>${escapeHtml(s.name)}, ${escapeHtml(x[i])}: ${fmt(v)} (${percentText(v, total)})</title></rect>`
+      if (w > 34) body += text(at + w / 2, y + 15, percentText(v, total), `text-anchor="middle" class="inbar"`)
+      at += w
+    })
+    body += text(label + plot + 6, y + 16, formatNumber(total), `class="val"`)
+  })
+  const key = `<div class="legend">${x.map((b, i) => `<span><i style="background:${bucketColor(i, x.length)}"></i>${escapeHtml(b)}</span>`).join("")}</div>`
+  return svg(series.length * rowH + 6, body) + key
+}
+
+function overlap(spec: Spec) {
+  const { sets, regions } = overlapRegions(spec)
+  const count = (names: string[]) => regions.find((r) => r.sets.length === names.length && names.every((n) => r.sets.includes(n)))?.count ?? 0
+  const H = 300
+  const r = 105
+  // Two circles side by side, or three in a triangle; each region's exclusive count sits in it.
+  const centres =
+    sets.length === 2
+      ? [
+          [W / 2 - 65, H / 2],
+          [W / 2 + 65, H / 2],
+        ]
+      : [
+          [W / 2 - 62, H / 2 - 6],
+          [W / 2 + 62, H / 2 - 6],
+          [W / 2, H / 2 + 102],
+        ]
+  let body = ""
+  sets.forEach((name, i) => {
+    const [cx, cy] = centres[i]
+    body += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${PALETTE[i]}" fill-opacity="0.28" stroke="${PALETTE[i]}" stroke-width="2"><title>${escapeHtml(name)}</title></circle>`
+  })
+  const at = (names: string[]) => {
+    const idx = names.map((n) => sets.indexOf(n))
+    const mean = (k: 0 | 1) => idx.reduce((a, i) => a + centres[i][k], 0) / idx.length
+    if (names.length === 1) {
+      // Push a set's own count away from the others.
+      const [cx, cy] = centres[idx[0]]
+      const ox = centres.reduce((a, c) => a + c[0], 0) / centres.length
+      const oy = centres.reduce((a, c) => a + c[1], 0) / centres.length
+      const d = Math.hypot(cx - ox, cy - oy) || 1
+      return [cx + ((cx - ox) / d) * r * 0.45, cy + ((cy - oy) / d) * r * 0.45]
+    }
+    if (names.length === sets.length) return [mean(0), mean(1)]
+    // A pair in a three way diagram: away from the third circle.
+    const third = sets.length === 3 ? centres[[0, 1, 2].find((i) => !idx.includes(i))!] : undefined
+    const mx = mean(0)
+    const my = mean(1)
+    if (!third) return [mx, my]
+    const d = Math.hypot(mx - third[0], my - third[1]) || 1
+    return [mx + ((mx - third[0]) / d) * 22, my + ((my - third[1]) / d) * 22]
+  }
+  regions.forEach((reg) => {
+    const [x, y] = at(reg.sets)
+    body += text(x, y + 6, formatNumber(reg.count), `text-anchor="middle" class="big"`)
+  })
+  sets.forEach((name, i) => {
+    const [cx, cy] = centres[i]
+    const above = sets.length === 2 || i < 2
+    body += text(cx, above ? cy - r - 10 : cy + r + 22, cut(name, 28), `text-anchor="middle" class="lbl"`)
+  })
+  const shared = sets
+    .map((name, i) => {
+      const own = count([name])
+      const total = regions.filter((reg) => reg.sets.includes(name)).reduce((a, reg) => a + reg.count, 0)
+      return `<span><i style="background:${PALETTE[i]}"></i>${escapeHtml(name)}: <b>${fmt(total)}</b> keywords, ${fmt(total - own)} shared (${percentText(total - own, total)})</span>`
+    })
+    .join("")
+  return svg(sets.length === 3 ? H + 80 : H - 20, body) + `<div class="legend">${shared}</div>`
+}
+
+function gauge(spec: Spec) {
+  const series = spec.series ?? []
+  const scores = gaugeScores(spec)
+  const color = (v: number) => (v >= 90 ? GOOD : v >= 50 ? "#E0A030" : BAD)
+  const dials = series
+    .map((s, i) => {
+      const v = Math.max(0, Math.min(100, scores[i]))
+      // A half ring from left to right; the colored arc covers the score.
+      const R = 46
+      const end = Math.PI * (1 - v / 100)
+      const ex = 60 + R * Math.cos(end)
+      const ey = 60 - R * Math.sin(end)
+      const arc = v > 0 ? `<path d="M14 60 A${R} ${R} 0 0 1 ${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="${color(v)}" stroke-width="12" stroke-linecap="round"/>` : ""
+      return `<div class="gauge"><svg viewBox="0 0 120 70" width="140" role="img"><title>${escapeHtml(s.name)}: ${Math.round(v)} of 100</title><path d="M14 60 A${R} ${R} 0 0 1 106 60" fill="none" stroke="var(--line)" stroke-width="12" stroke-linecap="round"/>${arc}<text x="60" y="58" text-anchor="middle" class="big" style="fill:${color(v)}">${Math.round(v)}</text></svg><div class="name">${escapeHtml(s.name)}</div></div>`
+    })
+    .join("")
+  return `<div class="gauges">${dials}</div><div class="legend"><span><i style="background:${GOOD}"></i>90 to 100</span><span><i style="background:#E0A030"></i>50 to 89</span><span><i style="background:${BAD}"></i>0 to 49</span></div>`
+}
+
+function donut(spec: Spec) {
+  const { x, series } = ordered({ ...spec, sort: spec.sort ?? "desc" })
+  const values = (series[0]?.values ?? []).map((v) => (num(v) ? Math.max(0, v) : 0))
+  const total = values.reduce((a, b) => a + b, 0) || 1
+  const R = 80
+  const C = 2 * Math.PI * R
+  let at = 0
+  let rings = ""
+  values.forEach((v, i) => {
+    const len = (v / total) * C
+    rings += `<circle cx="110" cy="110" r="${R}" fill="none" stroke="${PALETTE[i % PALETTE.length]}" stroke-width="34" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-at).toFixed(2)}" transform="rotate(-90 110 110)"><title>${escapeHtml(x[i])}: ${spec.unit === "%" ? fmt(v, "%") : `${percentText(v, total)} (${fmt(v, spec.unit)})`}</title></circle>`
+    at += len
+  })
+  const top = spec.unit === "%" ? fmt(values[0], "%") : percentText(values[0] ?? 0, total)
+  const centre = `<text x="110" y="108" text-anchor="middle" class="big">${top}</text><text x="110" y="128" text-anchor="middle" class="val">${escapeHtml(cut(x[0] ?? "", 18))}</text>`
+  const items = x
+    .map(
+      (name, i) =>
+        `<span><i style="background:${PALETTE[i % PALETTE.length]}"></i>${escapeHtml(name)} ${
+          spec.unit === "%" ? `<b>${fmt(values[i], "%")}</b>` : `<b>${percentText(values[i], total)}</b> (${fmt(values[i], spec.unit)})`
+        }</span>`,
+    )
+    .join("")
+  return `<div class="donut"><svg viewBox="0 0 220 220" width="220" role="img">${rings}${centre}</svg><div class="legend vertical">${items}</div></div>`
+}
+
 function kpi(spec: Spec) {
   return `<div class="kpis">${(spec.series ?? [])
     .map((s) => {
@@ -312,7 +622,9 @@ function dataTable(spec: Spec) {
   const table = spec.type === "table" ? spec : asTable(spec)
   if (!table) return ""
   const { x, series } = ordered(table)
-  const head = `<tr><th></th>${series.map((s) => `<th>${escapeHtml(s.name)}</th>`).join("")}</tr>`
+  const numeric = series.map((s) => s.values.every((v) => v === null || v === undefined || num(v)))
+  // Headers sort the table when clicked (see SORT_SCRIPT); a numeric column's header aligns with its numbers.
+  const head = `<tr><th scope="col" data-sort></th>${series.map((s, j) => `<th scope="col" data-sort class="${numeric[j] ? "num" : ""}">${escapeHtml(s.name)}</th>`).join("")}</tr>`
   const rows = x
     .map(
       (label, r) =>
@@ -320,12 +632,20 @@ function dataTable(spec: Spec) {
           .map((s, j) => {
             const v = s.values[r]
             if (Array.isArray(v)) return `<td>${spark(v, PALETTE[j % PALETTE.length], s.lower_is_better)}</td>`
-            return `<td class="${num(v) ? "num" : ""}">${num(v) ? fmt(v, table.unit) : escapeHtml(v ?? "")}</td>`
+            if (num(v) && isDifficulty(s.name))
+              return `<td class="num" data-v="${v}"><span class="kd" style="--kd:${kdColor(v)}">${Math.round(v)}</span></td>`
+            if (num(v)) return `<td class="num" data-v="${v}">${fmt(v, table.unit)}</td>`
+            const pill = /intent/i.test(s.name) && typeof v === "string" ? intentPill(v) : undefined
+            if (pill)
+              return `<td><span class="pill" style="--pill:${INTENT[pill.text].color}" title="${escapeHtml(INTENT[pill.text].tip)}">${pill.text}</span></td>`
+            return `<td>${escapeHtml(v ?? "")}</td>`
           })
           .join("")}</tr>`,
     )
     .join("")
-  return `<div class="scroll"><table class="data">${head}${rows}</table></div>`
+  // Long tables get a filter box (see SORT_SCRIPT).
+  const filter = x.length > 10 ? `<input class="filter" type="search" placeholder="Filter ${x.length} rows" aria-label="Filter rows">` : ""
+  return `${filter}<div class="scroll"><table class="data">${head}${rows}</table></div>`
 }
 
 /** One chart as an HTML figure: title, graphic, data table, source. */
@@ -353,7 +673,15 @@ export function figure(spec: Spec): string {
                       ? tilemap(spec)
                   : spec.type === "kpi"
                     ? kpi(spec)
-                    : ""
+                    : spec.type === "distribution"
+                      ? distribution(spec)
+                      : spec.type === "overlap"
+                        ? overlap(spec)
+                        : spec.type === "gauge"
+                          ? gauge(spec)
+                          : spec.type === "donut"
+                            ? donut(spec)
+                            : ""
   if (spec.type === "sparkline") {
     const series = spec.series ?? []
     spec = {
@@ -400,6 +728,36 @@ function crew() {
   return `<svg class="crew" viewBox="0 -12 ${3 * 8 * px} ${height + 12}" width="${3 * 8 * px}" height="${height + 12}" role="img" aria-label="The DataForSEO Agent crew: three pixel bots">${bots.join("")}</svg>`
 }
 
+// Progressive enhancement for the data tables: click a header to sort (again to flip), type to filter rows.
+// The report reads fine without it (printed, or with scripts off).
+const SORT_SCRIPT = `document.querySelectorAll("table.data").forEach((table) => {
+  const rows = () => [...table.rows].slice(1)
+  table.querySelectorAll("th[data-sort]").forEach((th, col) => {
+    th.tabIndex = 0
+    th.title = "Sort"
+    const sort = () => {
+      const dir = th.dataset.dir === "desc" ? "asc" : "desc"
+      table.querySelectorAll("th[data-sort]").forEach((other) => { delete other.dataset.dir; other.removeAttribute("aria-sort") })
+      th.dataset.dir = dir
+      th.setAttribute("aria-sort", dir === "asc" ? "ascending" : "descending")
+      const key = (row) => { const cell = row.cells[col]; return cell && cell.dataset.v !== undefined ? Number(cell.dataset.v) : (cell ? cell.textContent : "") }
+      rows().sort((a, b) => {
+        const x = key(a), y = key(b)
+        const order = typeof x === "number" && typeof y === "number" ? x - y : typeof x === "number" ? -1 : typeof y === "number" ? 1 : String(x).localeCompare(String(y))
+        return dir === "asc" ? order : -order
+      }).forEach((row) => table.tBodies[0].appendChild(row))
+    }
+    th.addEventListener("click", sort)
+    th.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sort() } })
+  })
+  const input = table.parentElement.previousElementSibling
+  if (input && input.classList.contains("filter"))
+    input.addEventListener("input", () => {
+      const q = input.value.toLowerCase()
+      rows().forEach((row) => { row.hidden = q !== "" && !row.textContent.toLowerCase().includes(q) })
+    })
+})`
+
 /** A full, self-contained HTML document with every chart in order. */
 export function report(specs: readonly Spec[], meta: { title?: string; created?: Date; note?: string } = {}): string {
   const title = meta.title ?? "DataForSEO report"
@@ -419,7 +777,10 @@ header h1{margin:0 0 4px;font-size:26px}header p{margin:0;color:var(--muted)}
 .brand{display:inline-block;width:10px;height:22px;margin-right:4px;vertical-align:-3px;border-radius:2px}
 figure{margin:28px 0;padding:18px;background:var(--card);border:1px solid var(--line);border-radius:10px}
 figcaption{font-weight:600;font-size:17px;margin-bottom:10px}figcaption span{display:block;font-weight:400;font-size:14px;color:var(--muted)}
-svg text{fill:var(--fg);font-size:12px}svg .val{fill:var(--muted);font-size:11px}svg .axis{stroke:var(--line)}
+svg text{fill:var(--fg);font-size:12px}svg .val{fill:var(--muted);font-size:11px}.plot{overflow-x:auto}.plot svg{min-width:560px}svg .big{font-size:20px;font-weight:700}svg .inbar{fill:#fff;font-size:11px;font-weight:600}
+.gauges{display:flex;flex-wrap:wrap;gap:12px 24px}.gauge{text-align:center}.gauge .name{color:var(--muted);font-size:13px}
+.donut{display:flex;flex-wrap:wrap;align-items:center;gap:16px 32px}.legend.vertical{flex-direction:column;margin:0}
+@media (max-width:600px){svg text{font-size:15px}svg .val{font-size:14px}}svg .axis{stroke:var(--line)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:13px}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
 .axisnote,.source{color:var(--muted);font-size:12px;margin:6px 0 0}
 table{border-collapse:collapse;width:100%;margin-top:12px;font-size:13px}th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left}
@@ -431,6 +792,13 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}table.grid td.heat{tex
 @keyframes hop{0%,20%,100%{transform:translateY(0)}10%{transform:translateY(-10px)}}
 @media (prefers-reduced-motion:reduce){.crew .hop{animation:none}}
 details summary{cursor:pointer;color:var(--muted);margin-top:10px}
+.kd{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 4px;border-radius:13px;font-weight:700;font-size:12px;color:var(--kd);background:color-mix(in oklab,var(--kd) 16%,transparent);box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--kd) 35%,transparent)}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600;color:var(--pill);background:color-mix(in oklab,var(--pill) 15%,transparent)}
+.trend{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.trend b{font-size:12px;font-weight:600}
+svg .grid{stroke:var(--line);stroke-dasharray:3 3}svg .pt{font-size:11px;paint-order:stroke;stroke:var(--card);stroke-width:3px}svg .zone{fill:#10b981;fill-opacity:0.08}
+th.num{text-align:right}th[data-sort]{cursor:pointer;user-select:none}th[data-sort]:hover{color:var(--fg);text-decoration:underline}
+th[data-dir=asc]::after{content:" ▲";font-size:10px}th[data-dir=desc]::after{content:" ▼";font-size:10px}
+.filter{margin-top:12px;padding:6px 10px;width:min(100%,280px);border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
 .kpis{display:flex;flex-wrap:wrap;gap:12px}.kpi{flex:1 1 150px;padding:12px;border:1px solid var(--line);border-radius:8px}
 .kpi .name{color:var(--muted);font-size:13px}.kpi .big{font-size:24px;font-weight:700}.err{color:${BAD}}
 footer{color:var(--muted);font-size:12px;margin-top:40px}
@@ -440,6 +808,6 @@ footer{color:var(--muted);font-size:12px;margin-top:40px}
 <p>${specs.length} chart${specs.length === 1 ? "" : "s"} · created ${escapeHtml(created)}${meta.note ? ` · ${escapeHtml(meta.note)}` : ""}</p></header>
 ${specs.map(figure).join("\n")}
 <footer>Made with DataForSEO Agent. Numbers come from DataForSEO API responses; each chart names its endpoint and cost.</footer>
-</main></body></html>
+</main><script>${SORT_SCRIPT}</script></body></html>
 `
 }

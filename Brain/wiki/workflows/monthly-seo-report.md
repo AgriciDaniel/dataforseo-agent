@@ -8,7 +8,7 @@ domain: dataforseo
 status: stable
 confidence: practitioner
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 tags: [dataforseo, workflow, skill]
 ---
 
@@ -35,7 +35,7 @@ A client or owner wants the monthly picture of one site: "how did we do this mon
 
 ## Steps
 1. Confirm domain, location and language; check the balance with the free `GET /v3/appendix/user_data`.
-2. Give the estimate below and get the user's yes.
+2. Give the estimate below, then run; the app's request prompt approves each paid call ([[budget-gates]]).
 3. Run `domain_rank_overview`, then `historical_rank_overview` if wanted (`date_from` 12 months back).
 4. Run `ranked_keywords` sorted by estimated traffic, top 100.
 5. Run Backlinks `summary` and `timeseries_new_lost_summary` for the last 12 months.

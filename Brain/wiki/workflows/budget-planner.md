@@ -8,7 +8,7 @@ domain: dataforseo
 status: stable
 confidence: practitioner
 created: 2026-11-06
-updated: 2026-11-06
+updated: 2026-11-07
 tags: [dataforseo, workflow, skill]
 ---
 
@@ -59,7 +59,7 @@ A priced plan: one row per step, totals per run, per month and overall, the chea
 - Whether the balance and the session budget cover it, and what to top up if not.
 - Which steps carry most of the cost and the one change that saves the most.
 - That these are list prices and the billed `tasks[].cost` will show the real figure.
-- If the user wants to run it now, end with the line "Run it for $X?" using the maximum total, for example "Run it for $1.80?".
+- A quote spends nothing. If the user then wants to run it, make the calls: the app's request prompt is the approval ([[budget-gates]]). Without a prompt, end with "Run it for $X?", for example "Run it for $1.80?".
 - Close with the billed cost (sum of `tasks[].cost`) next to the estimate; for sandbox runs say the data is dummy.
 
 ## Pitfalls
