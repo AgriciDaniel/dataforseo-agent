@@ -1,0 +1,58 @@
+{
+ "case": "kpi-backlinks-summary-no-previous",
+ "workflow": "backlink-audit",
+ "endpoint": "POST /v3/backlinks/summary/live",
+ "source": "research/chart-fixtures/sources/sandbox-S8-backlinks-summary.json",
+ "source_cost_usd": 0,
+ "expect": "valid",
+ "notes": "No previous values: render without deltas. Values range from 16 to 289221.",
+ "spec": {
+  "type": "kpi",
+  "title": "Backlink profile: dataforseo.com",
+  "subtitle": "current values only",
+  "x": [],
+  "series": [
+   {
+    "name": "backlinks",
+    "values": [
+     289221
+    ]
+   },
+   {
+    "name": "referring_domains",
+    "values": [
+     3464
+    ]
+   },
+   {
+    "name": "referring_main_domains",
+    "values": [
+     3303
+    ]
+   },
+   {
+    "name": "rank",
+    "values": [
+     55
+    ]
+   },
+   {
+    "name": "broken_backlinks",
+    "values": [
+     2174
+    ],
+    "lower_is_better": true
+   },
+   {
+    "name": "backlinks_spam_score",
+    "values": [
+     16
+    ],
+    "lower_is_better": true
+   }
+  ],
+  "unit": null,
+  "sort": "none",
+  "limit": 6
+ }
+}

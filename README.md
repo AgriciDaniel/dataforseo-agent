@@ -1,0 +1,240 @@
+<!--
+DataForSEO Agent is a free, open source terminal app for the DataForSEO API. Ask SEO questions in plain words:
+it picks the cheapest correct DataForSEO v3 endpoint, shows the price before it spends anything, and draws the
+results as charts, tables and maps in your terminal. SERP API, keyword research, Google rankings, local SEO
+geogrid, backlinks, on-page audits, AI visibility (AI Optimization API), app data and merchant data. Works with
+Claude, ChatGPT, Gemini and 75+ AI model providers.
+-->
+
+<p align="center">
+  <img src="docs/readme/hero.svg" width="1200" height="420" alt="DataForSEO Agent hero animation: three pixel bots walk into a terminal where someone types Top 10 Google results for best crm in the US. The agent routes the question to the DataForSEO SERP API, shows the price first with Run it for $0.002?, a bot presses YES, and a ranked top 10 SERP bar chart grows. SEO data, priced before you pay." />
+</p>
+
+<h1 align="center">DataForSEO Agent</h1>
+
+<p align="center">
+  <b>Ask SEO questions in plain words. Get DataForSEO data as charts, tables and maps in your terminal.</b><br />
+  It picks the cheapest correct API call and shows you the price before it spends a cent.
+</p>
+
+<p align="center">
+  <a href="#install">Install</a> · <a href="#how-it-keeps-your-money-safe">Cost guard</a> · <a href="#charts-and-maps">Charts</a> · <a href="#the-12-apis-and-the-team">APIs and team</a> · <a href="#commands">Commands</a> · <a href="#faq">FAQ</a>
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
+  <img src="https://img.shields.io/badge/DataForSEO%20API-v3-2862A8" alt="DataForSEO API v3" />
+  <img src="https://img.shields.io/badge/endpoints-576%20live--tested-137A74" alt="576 endpoints, live-tested" />
+  <img src="https://img.shields.io/badge/models-Claude%20%C2%B7%20ChatGPT%20%C2%B7%20Gemini%20%C2%B7%2075%2B-EABD59" alt="Claude, ChatGPT, Gemini and 75+ providers" />
+</p>
+
+**DataForSEO Agent turns an SEO question into the right DataForSEO API calls, asks before it spends, and shows the answer as a chart you can sort, hover and save.**
+
+- **Plain-language SEO research:** "Who ranks for best crm in the US?", "Backlink gap between my site and a competitor", "Where does my plumbing business rank across the city?"
+- **Price first, every time:** the agent estimates the cost from the catalog and ends with "Run it for $X?". Then the app itself asks again, showing the list price, before any paid request.
+- **A hard session budget:** $1 by default. Once a session has spent it, no more DataForSEO requests go out.
+- **Charts, not raw JSON:** 12 chart types in the terminal, including a local SEO geogrid on map tiles and a US state map, plus a one-file HTML report.
+- **All of DataForSEO:** 576 active v3 endpoints across 12 APIs, every one live-tested, with a specialist agent per API.
+- **Any AI model:** Claude, ChatGPT, Gemini, OpenRouter and 75+ other providers.
+
+## Install
+
+<p align="center">
+  <img src="docs/readme/install.svg" width="1200" height="420" alt="Install DataForSEO Agent in three commands: tools/install.sh, dataforseo-agent-setup to connect your DataForSEO API account, set a session budget and market and pick any AI model, then dfa to start. Press start: the three bots boot up while the counters fill to 14 SEO agents and 33 SEO workflow skills." />
+</p>
+
+You need [Bun](https://bun.sh), Python 3, Node 22 or newer (for the DataForSEO MCP server) and a [DataForSEO](https://dataforseo.com) account.
+
+```bash
+git clone https://github.com/AgriciDaniel/dataforseo-agent.git
+cd dataforseo-agent
+tools/install.sh          # builds the app and installs dataforseo-agent and dfa to ~/.local/bin
+dataforseo-agent-setup    # account, budget and market, AI model
+dfa                       # start
+```
+
+Your first run:
+
+```text
+> What's my DataForSEO balance?                 (free, no prompt)
+> Top 10 Google results for "best crm" in the US
+  ...route, plan and cost...
+  Run it for $0.002?                            (say yes, then approve the request)
+```
+
+<details>
+<summary><b>What setup asks</b></summary>
+
+1. **Account.** Type your API login and password (the password is hidden), or point to an env file you already keep. Typed credentials go only into `~/.config/dataforseo-agent/credentials.env`, readable only by you. From an env file, only the `DATAFORSEO_*` lines are read. Your password never goes through a model.
+2. **Budget and market.** The session budget, and your default location, language and mode.
+3. **Model.** Sign in to Claude or ChatGPT, or add an API key later with `/connect`.
+
+Credentials already in your environment (`DATAFORSEO_LOGIN` or `DATAFORSEO_USERNAME`, and `DATAFORSEO_PASSWORD`) always win over the saved file.
+
+Choosing a model:
+
+- Claude, through your Claude Code login: `dataforseo-agent auth login claude-agent`
+- ChatGPT, through your ChatGPT account: `dataforseo-agent auth login openai` (add `--method chatgpt-token-sharing` when the terminal is not interactive)
+- Gemini, OpenRouter and the rest: an API key, with `/connect` in the app. Then pick a model with `/models`, or start with `dfa -m provider/model`.
+
+</details>
+
+## How it keeps your money safe
+
+<p align="center">
+  <img src="docs/readme/cost.svg" width="1200" height="420" alt="DataForSEO Agent cost guard: each DataForSEO API call stops at a gate with its price. The free /dfs-balance call passes with no prompt, paid SEO calls for rank checks and keyword research wait for YES and fill a $1.00 session budget meter, and the call that would cross the budget is blocked with Session budget reached." />
+</p>
+
+Every paid DataForSEO call stops at a prompt that shows the method, path, body, number of tasks and the catalog list price, and waits for your yes. "Always allow" covers that one endpoint only. Free calls run without asking: the sandbox, your balance, task results, location and language lists, and docs lookups. Raw calls to `api.dataforseo.com` from the shell or a web fetch ask too.
+
+The session budget is enforced by the app itself, not just by the agent's instructions. It adds up the billed cost of each call in the session and its sub-agents (or the catalog price when a response leaves the cost out). As a backstop it also watches your account balance, so anything else billed while the session is open counts too. Free calls, such as fetching a result you already paid for, are never blocked. The sidebar shows your balance, today's spend against the daily limit, and this session's spend against the budget.
+
+<details>
+<summary><b>Settings</b></summary>
+
+`~/.config/dataforseo-agent/settings.json`, changed with `/dfs-settings` or `dataforseo-agent-setup`:
+
+| Setting | Default | What it does |
+|---|---|---|
+| `budget_per_session_usd` | `1` | Hard stop. Once a session (with its sub-agents) has spent this much, the app sends no more DataForSEO requests. |
+| `ask_above_usd` | `0` | The agent skips its "Run it for $X?" question for estimates at or below this. `0` means it always asks. The app's own request prompt still appears. |
+| `default_location_code` | `2840` (United States) | Used when you don't name a market. |
+| `default_language_code` | `en` | Same, for language. |
+| `prefer_mode` | `cheapest` | `cheapest`, `standard` or `live`. |
+
+</details>
+
+## Charts and maps
+
+<p align="center">
+  <img src="docs/readme/maps.svg" width="1200" height="420" alt="DataForSEO Agent charts in the terminal: a local SEO geogrid of 25 rank tiles lights up on map tiles around a pinned business, green for ranks 1 to 3, teal for 4 to 10, gold for 11 to 20, with Top 3: 9 of 25. The view flips to a US tile map of keyword search volume by state and a 12 month trend sparkline. 12 chart types in total." />
+</p>
+
+Numeric results come back as one of 12 chart types: table, kpi, hbar, grouped-bar, share-bar, diverging-bar, line, sparkline, scatter, heatmap, geogrid (a local rank grid drawn on map tiles, with your business pinned) and tilemap (a map of US states). Each chart names the endpoint and the billed cost under it, and each workflow draws the same default charts every time.
+
+- Click a column header to sort. Point at a bar, marker or tile to see its exact value.
+- `[table]` switches between chart and table. `[copy CSV]` and `[save CSV]` export the data.
+- `[save report]` writes one HTML file with every chart in the session, in light and dark mode.
+- `[full screen]` opens the chart full screen.
+
+## The 12 APIs and the team
+
+<p align="center">
+  <img src="docs/readme/apis.svg" width="1200" height="420" alt="The 12 DataForSEO APIs as a pixel city: the three bots visit SERP, Keywords Data, Labs, Backlinks, OnPage, Domain Analytics, Content Analysis, Business Data, Merchant, App Data, AI Optimization for AI visibility, and Databases, while the counter reaches 576 DataForSEO API endpoints, every one live-tested, with one specialist agent per API." />
+</p>
+
+The main agent, `dataforseo`, routes every job. `@cost-guard` estimates cost, checks your balance and budget, and blocks unapproved spend. Twelve specialists, one per API, know their endpoints, parameters, limits and prices.
+
+<details>
+<summary><b>The specialists</b></summary>
+
+| Agent | DataForSEO API | Good for |
+|---|---|---|
+| `@serp` | SERP API | Google, Bing and other search results, rank checks, SERP features |
+| `@keywords-data` | Keywords Data API | Search volume, CPC, Google Trends |
+| `@labs` | DataForSEO Labs | Keyword research, competitors, ranked keywords, traffic estimates |
+| `@backlinks` | Backlinks API | Backlink profiles, referring domains, link gaps |
+| `@onpage` | OnPage API | Site crawls, technical SEO checks, page audits |
+| `@domain-analytics` | Domain Analytics API | Technologies, Whois |
+| `@content-analysis` | Content Analysis API | Brand mentions, sentiment |
+| `@business-data` | Business Data API | Google Business profiles, reviews, local SEO |
+| `@merchant` | Merchant API | Google Shopping and Amazon products and sellers |
+| `@app-data` | App Data API | Google Play and App Store apps and reviews |
+| `@ai-optimization` | AI Optimization API | AI visibility: what ChatGPT, Gemini, Perplexity and AI Overviews say about a brand |
+| `@databases` | Databases | Advice on bulk datasets (no API calls) |
+
+Behind them sits the DataForSEO Brain: source-cited notes and 33 workflow skills, from a backlink gap check to a local rank geogrid. Who it's for: SEO consultants who want answers without writing API code, agencies watching API spend across clients, and developers learning which endpoint fits a job.
+
+</details>
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `dfa` or `dataforseo-agent` | Start the app. `dfa -m provider/model` starts with a given model. |
+| `dataforseo-agent-setup` | Connect the account, set budget and market, sign in to a model. |
+| `dataforseo-agent --check-account` | Check the login, balance and today's spend (free). |
+| `dataforseo-agent-update` | Pull the latest version, rebuild and reinstall. |
+
+Inside the app:
+
+| Command | What it does |
+|---|---|
+| `/dfs-route` | Which endpoint fits this job, and what it will cost. |
+| `/dfs-cost` | Estimate the cost of a plan before running it. |
+| `/dfs-balance` | Account balance and limits (free). |
+| `/dfs-endpoint` | One endpoint explained: parameters, modes, limits, price, an example request. |
+| `/dfs-news` | What changed at DataForSEO lately (free). |
+| `/dfs-settings` | Show or change the budget, default market and mode. |
+
+## FAQ
+
+<details>
+<summary><b>Is DataForSEO Agent free?</b></summary>
+
+The app is free and open source (MIT). DataForSEO itself is pay as you go: you pay DataForSEO for the API calls you approve, and the app shows each price before you approve it. Your AI model works through your own Claude or ChatGPT login, or your own API key.
+
+</details>
+
+<details>
+<summary><b>How much does a typical question cost?</b></summary>
+
+Most single lookups cost a fraction of a cent to a few cents: a top 10 Google check is about $0.002, a backlink summary about $0.02. Bigger jobs, such as a site crawl or a city-wide geogrid, cost more, and the agent shows the arithmetic before it asks. The session budget caps any one session ($1 by default).
+
+</details>
+
+<details>
+<summary><b>Can it spend money without asking me?</b></summary>
+
+No. Every paid request stops at a permission prompt with its price, and the session budget is a hard stop in the app itself. Only calls the catalog marks free, such as your balance or a task result you already paid for, run without asking.
+
+</details>
+
+<details>
+<summary><b>Which AI models does it work with?</b></summary>
+
+Any of them: Claude through your Claude Code login, ChatGPT through your ChatGPT account, and Gemini, OpenRouter and 75+ other providers with an API key. Your DataForSEO password never goes through the model.
+
+</details>
+
+<details>
+<summary><b>Does it do local SEO?</b></summary>
+
+Yes. The geogrid chart shows where a business ranks across a grid of points around its location, drawn on map tiles with the business pinned. It uses the DataForSEO SERP and Business Data APIs.
+
+</details>
+
+<details>
+<summary><b>How do I know the endpoint and price data are current?</b></summary>
+
+The catalog is built from DataForSEO's official OpenAPI spec and pricing pages, and every one of the 576 active endpoints was called live to confirm it works. `/dfs-news` shows recent DataForSEO changes. If a Brain note and the catalog disagree, the catalog wins.
+
+</details>
+
+<details>
+<summary><b>Good to know</b></summary>
+
+- **Platforms:** Linux and macOS (built with Bun). Windows is untested.
+- **Where things live:** the app and its generated agents, skills and MCP config live in `~/.config/dataforseo-agent/` (rewritten on every install). Your own config is `~/.config/dataforseo-agent/dataforseo-agent.jsonc`, created once and never touched again. Sessions and logs are in `~/.local/share/dataforseo-agent/`.
+- **Refreshing the Brain and catalog:** rebuild the catalog with `research/scripts/README.md`, update the Brain following `Brain/docs/OPERATOR_KIT.md`, check it with `Brain/tools/check.sh`, then run `tools/install.sh` again.
+- **Uninstall:** delete `~/.local/bin/dataforseo-agent`, `~/.local/bin/dfa`, `~/.local/bin/dataforseo-agent-setup`, `~/.local/bin/dataforseo-agent-update`, `~/.local/lib/dataforseo-agent` and `~/.config/dataforseo-agent`.
+
+</details>
+
+## License
+
+MIT, see [LICENSE](LICENSE).
+
+DataForSEO is a trademark of its owner. This is an independent project that uses the public DataForSEO API.
+
+Built by **[Agrici Daniel](https://agricidaniel.com/about)**, AI Workflow Architect, with help from the [AI Marketing Hub Pro](https://www.skool.com/ai-marketing-hub-pro) community. The three bots are from my GitHub profile.
+
+<p align="center">
+  <img src="docs/readme/footer.svg" width="1200" height="420" alt="Thanks for playing: a CONTINUE? countdown runs, a price tag says starring the DataForSEO Agent repo is free with no prompt, the three bots hop and a pixel star fills gold. Recap: 576 DataForSEO API endpoints, 12 APIs, 14 agents, 33 SEO skills, 12 chart types, 75+ AI model providers. Continue? Star the repo." />
+</p>
+
+<p align="center">
+  <a href="https://www.youtube.com/@AgriciDaniel"><img src="docs/readme/btn-youtube.svg" width="137" height="44" alt="Tutorials and demos on YouTube" /></a>
+  <a href="https://www.skool.com/ai-marketing-hub"><img src="docs/readme/btn-hub.svg" width="210" height="44" alt="AI Marketing Hub, the free community on Skool" /></a>
+  <a href="https://www.skool.com/ai-marketing-hub-pro"><img src="docs/readme/btn-pro.svg" width="155" height="44" alt="AI Marketing Hub Pro" /></a>
+</p>

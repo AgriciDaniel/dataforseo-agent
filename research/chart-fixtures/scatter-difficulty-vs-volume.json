@@ -1,0 +1,238 @@
+{
+ "case": "scatter-difficulty-vs-volume",
+ "workflow": "keyword-research",
+ "endpoint": "POST /v3/dataforseo_labs/google/keyword_ideas/live (and other Labs keyword endpoints)",
+ "source": [
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-domain-intersection.json",
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-keyword-ideas.json",
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-keyword-suggestions.json",
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-keywords-for-site.json",
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-ranked-keywords.json",
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-related-keywords.json",
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-top-searches.json",
+  "research/chart-fixtures/sources/sandbox-S1-keyword-ideas.json",
+  "research/chart-fixtures/sources/sandbox-S5-ranked-keywords.json"
+ ],
+ "source_cost_usd": [
+  0.0105,
+  0.0105,
+  0.0105,
+  0.0105,
+  0.0105,
+  0.0105,
+  0.0105,
+  0,
+  0
+ ],
+ "expect": "valid",
+ "notes": "38 real points (every pooled keyword with both fields; 40 were asked for, the fixtures hold 38). Volume spans 10 to 226000000: use a log x axis.",
+ "spec": {
+  "type": "scatter",
+  "title": "Keyword difficulty vs search volume",
+  "subtitle": "38 keywords, pooled Labs responses",
+  "x": [
+   "seo tools",
+   "serps api",
+   "web ranking",
+   "website ranking sites",
+   "internet site rankings",
+   "google keyword planner",
+   "seo checker",
+   "bing webmaster tools",
+   "small seo tools",
+   "ahrefs backlink checker",
+   "seo engine optimization",
+   "search engine positioning seo",
+   "seo",
+   "seo search optimization",
+   "search engine optimizer seo",
+   "dataforseo serp api",
+   "google business search keywords",
+   "api for google serp",
+   "1000 keywords",
+   "api for seo",
+   "backlink checker api",
+   "backlinks api",
+   "data for seo",
+   "seo marketing",
+   "seo course",
+   "seo career",
+   "seo learning",
+   "6youtube",
+   "yourb",
+   "youcine",
+   "youtube",
+   "yout8be",
+   "nothing phone",
+   "find phone",
+   "tin can phone",
+   "alternatives to google trends",
+   "amazon search volume api",
+   "api for seo software projects"
+  ],
+  "x_label": "search_volume (log)",
+  "y_label": "keyword_difficulty",
+  "series": [
+   {
+    "name": "keywords",
+    "values": [
+     [
+      90500,
+      50
+     ],
+     [
+      12100,
+      46
+     ],
+     [
+      9900,
+      86
+     ],
+     [
+      9900,
+      89
+     ],
+     [
+      9900,
+      63
+     ],
+     [
+      201000,
+      62
+     ],
+     [
+      6600,
+      80
+     ],
+     [
+      14800,
+      36
+     ],
+     [
+      1000,
+      12
+     ],
+     [
+      6600,
+      48
+     ],
+     [
+      110000,
+      100
+     ],
+     [
+      110000,
+      17
+     ],
+     [
+      110000,
+      94
+     ],
+     [
+      110000,
+      91
+     ],
+     [
+      110000,
+      100
+     ],
+     [
+      70,
+      12
+     ],
+     [
+      10,
+      67
+     ],
+     [
+      90,
+      62
+     ],
+     [
+      50,
+      32
+     ],
+     [
+      590,
+      28
+     ],
+     [
+      70,
+      12
+     ],
+     [
+      210,
+      29
+     ],
+     [
+      720,
+      18
+     ],
+     [
+      12100,
+      75
+     ],
+     [
+      4400,
+      53
+     ],
+     [
+      2400,
+      16
+     ],
+     [
+      1600,
+      48
+     ],
+     [
+      226000000,
+      49
+     ],
+     [
+      226000000,
+      4
+     ],
+     [
+      226000000,
+      0
+     ],
+     [
+      226000000,
+      100
+     ],
+     [
+      226000000,
+      100
+     ],
+     [
+      165000,
+      31
+     ],
+     [
+      14800,
+      57
+     ],
+     [
+      135000,
+      5
+     ],
+     [
+      30,
+      6
+     ],
+     [
+      20,
+      0
+     ],
+     [
+      40,
+      9
+     ]
+    ]
+   }
+  ],
+  "unit": null,
+  "sort": "none",
+  "limit": 100
+ }
+}

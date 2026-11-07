@@ -1,0 +1,497 @@
+{
+ "version": "0.1.20261103",
+ "status_code": 20000,
+ "status_message": "Ok.",
+ "time": "0 sec.",
+ "cost": 0,
+ "tasks_count": 1,
+ "tasks_error": 0,
+ "tasks": [
+  {
+   "id": "11061624-1563-0406-2000-1a12c1d8ddc5",
+   "status_code": 20000,
+   "status_message": "Ok.",
+   "time": "0 sec.",
+   "cost": 0,
+   "result_count": 1,
+   "path": [
+    "v3",
+    "dataforseo_labs",
+    "google",
+    "historical_rank_overview",
+    "live"
+   ],
+   "data": {
+    "api": "dataforseo_labs",
+    "function": "historical_rank_overview",
+    "se_type": "google",
+    "target": "dataforseo.com",
+    "location_code": 2840,
+    "language_code": "en"
+   },
+   "result": [
+    {
+     "se_type": "google",
+     "target": "dataforseo.com",
+     "location_code": 2840,
+     "language_code": "en",
+     "total_count": 6,
+     "items_count": 6,
+     "items": [
+      {
+       "se_type": "google",
+       "year": 2026,
+       "month": 10,
+       "metrics": {
+        "organic": {
+         "pos_1": 48,
+         "pos_2_3": 146,
+         "pos_4_10": 1223,
+         "pos_11_20": 2259,
+         "pos_21_30": 1941,
+         "pos_31_40": 1384,
+         "pos_41_50": 1042,
+         "pos_51_60": 731,
+         "pos_61_70": 432,
+         "pos_71_80": 203,
+         "pos_81_90": 94,
+         "pos_91_100": 25,
+         "etv": 14961.92980338486,
+         "count": 9528,
+         "estimated_paid_traffic_cost": 73518.36897124437,
+         "is_new": 7839,
+         "is_up": 917,
+         "is_down": 585,
+         "is_lost": 3727,
+         "clickstream_etv": 27475.138403999998,
+         "clickstream_gender_distribution": {
+          "female": 46,
+          "male": 53
+         },
+         "clickstream_age_distribution": {
+          "18-24": 30,
+          "25-34": 18,
+          "35-44": 18,
+          "45-54": 28,
+          "55-64": 4
+         }
+        },
+        "paid": {
+         "pos_1": 0,
+         "pos_2_3": 0,
+         "pos_4_10": 0,
+         "pos_11_20": 0,
+         "pos_21_30": 0,
+         "pos_31_40": 0,
+         "pos_41_50": 0,
+         "pos_51_60": 0,
+         "pos_61_70": 0,
+         "pos_71_80": 0,
+         "pos_81_90": 0,
+         "pos_91_100": 0,
+         "etv": 0,
+         "count": 0,
+         "estimated_paid_traffic_cost": 0,
+         "is_new": 0,
+         "is_up": 0,
+         "is_down": 0,
+         "is_lost": 0,
+         "clickstream_etv": 0,
+         "clickstream_gender_distribution": {
+          "female": 0,
+          "male": 0
+         },
+         "clickstream_age_distribution": {
+          "18-24": 0,
+          "25-34": 0,
+          "35-44": 0,
+          "45-54": 0,
+          "55-64": 0
+         }
+        }
+       }
+      },
+      {
+       "se_type": "google",
+       "year": 2026,
+       "month": 9,
+       "metrics": {
+        "organic": {
+         "pos_1": 38,
+         "pos_2_3": 140,
+         "pos_4_10": 1462,
+         "pos_11_20": 2663,
+         "pos_21_30": 2264,
+         "pos_31_40": 1643,
+         "pos_41_50": 1193,
+         "pos_51_60": 843,
+         "pos_61_70": 507,
+         "pos_71_80": 250,
+         "pos_81_90": 116,
+         "pos_91_100": 42,
+         "etv": 15027.54878546622,
+         "count": 11161,
+         "estimated_paid_traffic_cost": 75001.86209737479,
+         "is_new": 9069,
+         "is_up": 1293,
+         "is_down": 617,
+         "is_lost": 1612,
+         "clickstream_etv": 25872.944199999998,
+         "clickstream_gender_distribution": {
+          "female": 46,
+          "male": 53
+         },
+         "clickstream_age_distribution": {
+          "18-24": 30,
+          "25-34": 18,
+          "35-44": 18,
+          "45-54": 28,
+          "55-64": 4
+         }
+        },
+        "paid": {
+         "pos_1": 0,
+         "pos_2_3": 0,
+         "pos_4_10": 0,
+         "pos_11_20": 0,
+         "pos_21_30": 0,
+         "pos_31_40": 0,
+         "pos_41_50": 0,
+         "pos_51_60": 0,
+         "pos_61_70": 0,
+         "pos_71_80": 0,
+         "pos_81_90": 0,
+         "pos_91_100": 0,
+         "etv": 0,
+         "count": 0,
+         "estimated_paid_traffic_cost": 0,
+         "is_new": 0,
+         "is_up": 0,
+         "is_down": 0,
+         "is_lost": 0,
+         "clickstream_etv": 0,
+         "clickstream_gender_distribution": {
+          "female": 0,
+          "male": 0
+         },
+         "clickstream_age_distribution": {
+          "18-24": 0,
+          "25-34": 0,
+          "35-44": 0,
+          "45-54": 0,
+          "55-64": 0
+         }
+        }
+       }
+      },
+      {
+       "se_type": "google",
+       "year": 2026,
+       "month": 8,
+       "metrics": {
+        "organic": {
+         "pos_1": 37,
+         "pos_2_3": 81,
+         "pos_4_10": 491,
+         "pos_11_20": 824,
+         "pos_21_30": 558,
+         "pos_31_40": 340,
+         "pos_41_50": 260,
+         "pos_51_60": 186,
+         "pos_61_70": 146,
+         "pos_71_80": 100,
+         "pos_81_90": 66,
+         "pos_91_100": 44,
+         "etv": 2750.821956089996,
+         "count": 3133,
+         "estimated_paid_traffic_cost": 14932.724735211887,
+         "is_new": 1537,
+         "is_up": 901,
+         "is_down": 561,
+         "is_lost": 865,
+         "clickstream_etv": 11461.590070999997,
+         "clickstream_gender_distribution": {
+          "female": 50,
+          "male": 49
+         },
+         "clickstream_age_distribution": {
+          "18-24": 18,
+          "25-34": 20,
+          "35-44": 26,
+          "45-54": 29,
+          "55-64": 4
+         }
+        },
+        "paid": {
+         "pos_1": 1,
+         "pos_2_3": 1,
+         "pos_4_10": 0,
+         "pos_11_20": 0,
+         "pos_21_30": 0,
+         "pos_31_40": 0,
+         "pos_41_50": 0,
+         "pos_51_60": 0,
+         "pos_61_70": 0,
+         "pos_71_80": 0,
+         "pos_81_90": 0,
+         "pos_91_100": 0,
+         "etv": 10.897553443908691,
+         "count": 2,
+         "estimated_paid_traffic_cost": 138.4593963623047,
+         "is_new": 2,
+         "is_up": 0,
+         "is_down": 0,
+         "is_lost": 0,
+         "clickstream_etv": 16.83,
+         "clickstream_gender_distribution": {
+          "female": 66,
+          "male": 26
+         },
+         "clickstream_age_distribution": {
+          "18-24": 0,
+          "25-34": 18,
+          "35-44": 72,
+          "45-54": 0,
+          "55-64": 0
+         }
+        }
+       }
+      },
+      {
+       "se_type": "google",
+       "year": 2026,
+       "month": 7,
+       "metrics": {
+        "organic": {
+         "pos_1": 38,
+         "pos_2_3": 75,
+         "pos_4_10": 441,
+         "pos_11_20": 814,
+         "pos_21_30": 567,
+         "pos_31_40": 332,
+         "pos_41_50": 245,
+         "pos_51_60": 170,
+         "pos_61_70": 117,
+         "pos_71_80": 116,
+         "pos_81_90": 71,
+         "pos_91_100": 57,
+         "etv": 3260.727985498887,
+         "count": 3043,
+         "estimated_paid_traffic_cost": 24873.40667934836,
+         "is_new": 1503,
+         "is_up": 610,
+         "is_down": 815,
+         "is_lost": 827,
+         "clickstream_etv": 11507.357585999998,
+         "clickstream_gender_distribution": {
+          "female": 48,
+          "male": 50
+         },
+         "clickstream_age_distribution": {
+          "18-24": 20,
+          "25-34": 19,
+          "35-44": 25,
+          "45-54": 25,
+          "55-64": 8
+         }
+        },
+        "paid": {
+         "pos_1": 1,
+         "pos_2_3": 1,
+         "pos_4_10": 0,
+         "pos_11_20": 0,
+         "pos_21_30": 0,
+         "pos_31_40": 0,
+         "pos_41_50": 0,
+         "pos_51_60": 0,
+         "pos_61_70": 0,
+         "pos_71_80": 0,
+         "pos_81_90": 0,
+         "pos_91_100": 0,
+         "etv": 3.7439998388290405,
+         "count": 2,
+         "estimated_paid_traffic_cost": 14.543999671936035,
+         "is_new": 2,
+         "is_up": 0,
+         "is_down": 0,
+         "is_lost": 0,
+         "clickstream_etv": 15.69,
+         "clickstream_gender_distribution": {
+          "female": 61,
+          "male": 30
+         },
+         "clickstream_age_distribution": {
+          "18-24": 0,
+          "25-34": 30,
+          "35-44": 70,
+          "45-54": 0,
+          "55-64": 0
+         }
+        }
+       }
+      },
+      {
+       "se_type": "google",
+       "year": 2026,
+       "month": 6,
+       "metrics": {
+        "organic": {
+         "pos_1": 42,
+         "pos_2_3": 75,
+         "pos_4_10": 484,
+         "pos_11_20": 730,
+         "pos_21_30": 540,
+         "pos_31_40": 318,
+         "pos_41_50": 212,
+         "pos_51_60": 160,
+         "pos_61_70": 125,
+         "pos_71_80": 116,
+         "pos_81_90": 82,
+         "pos_91_100": 64,
+         "etv": 4574.549476786715,
+         "count": 2948,
+         "estimated_paid_traffic_cost": 23503.67439630419,
+         "is_new": 1344,
+         "is_up": 533,
+         "is_down": 953,
+         "is_lost": 1316,
+         "clickstream_etv": 10463.126891999998,
+         "clickstream_gender_distribution": {
+          "female": 47,
+          "male": 51
+         },
+         "clickstream_age_distribution": {
+          "18-24": 24,
+          "25-34": 19,
+          "35-44": 25,
+          "45-54": 21,
+          "55-64": 8
+         }
+        },
+        "paid": {
+         "pos_1": 1,
+         "pos_2_3": 0,
+         "pos_4_10": 0,
+         "pos_11_20": 0,
+         "pos_21_30": 0,
+         "pos_31_40": 0,
+         "pos_41_50": 0,
+         "pos_51_60": 0,
+         "pos_61_70": 0,
+         "pos_71_80": 0,
+         "pos_81_90": 0,
+         "pos_91_100": 0,
+         "etv": 2.8439998626708984,
+         "count": 1,
+         "estimated_paid_traffic_cost": 0,
+         "is_new": 1,
+         "is_up": 0,
+         "is_down": 0,
+         "is_lost": 0,
+         "clickstream_etv": 0,
+         "clickstream_gender_distribution": {
+          "female": 0,
+          "male": 0
+         },
+         "clickstream_age_distribution": {
+          "18-24": 0,
+          "25-34": 0,
+          "35-44": 0,
+          "45-54": 0,
+          "55-64": 0
+         }
+        }
+       }
+      },
+      {
+       "se_type": "google",
+       "year": 2026,
+       "month": 5,
+       "metrics": {
+        "organic": {
+         "pos_1": 41,
+         "pos_2_3": 83,
+         "pos_4_10": 630,
+         "pos_11_20": 566,
+         "pos_21_30": 412,
+         "pos_31_40": 283,
+         "pos_41_50": 187,
+         "pos_51_60": 137,
+         "pos_61_70": 108,
+         "pos_71_80": 96,
+         "pos_81_90": 90,
+         "pos_91_100": 73,
+         "etv": 6167.442319547799,
+         "count": 2706,
+         "estimated_paid_traffic_cost": 34452.1449840703,
+         "is_new": 968,
+         "is_up": 796,
+         "is_down": 802,
+         "is_lost": 2213,
+         "clickstream_etv": 11959.540574,
+         "clickstream_gender_distribution": {
+          "female": 48,
+          "male": 51
+         },
+         "clickstream_age_distribution": {
+          "18-24": 22,
+          "25-34": 21,
+          "35-44": 25,
+          "45-54": 22,
+          "55-64": 8
+         }
+        },
+        "paid": {
+         "pos_1": 0,
+         "pos_2_3": 0,
+         "pos_4_10": 0,
+         "pos_11_20": 0,
+         "pos_21_30": 0,
+         "pos_31_40": 0,
+         "pos_41_50": 0,
+         "pos_51_60": 0,
+         "pos_61_70": 0,
+         "pos_71_80": 0,
+         "pos_81_90": 0,
+         "pos_91_100": 0,
+         "etv": 0,
+         "count": 0,
+         "estimated_paid_traffic_cost": 0,
+         "is_new": 0,
+         "is_up": 0,
+         "is_down": 0,
+         "is_lost": 0,
+         "clickstream_etv": 0,
+         "clickstream_gender_distribution": {
+          "female": 0,
+          "male": 0
+         },
+         "clickstream_age_distribution": {
+          "18-24": 0,
+          "25-34": 0,
+          "35-44": 0,
+          "45-54": 0,
+          "55-64": 0
+         }
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "_fixture": {
+  "host": "sandbox.dataforseo.com",
+  "path": "/v3/dataforseo_labs/google/historical_rank_overview/live",
+  "request": [
+   {
+    "target": "dataforseo.com",
+    "location_code": 2840,
+    "language_code": "en"
+   }
+  ],
+  "retrieved": "2026-11-06",
+  "note": "sandbox: dummy values, production structure"
+ }
+}

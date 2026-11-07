@@ -1,0 +1,201 @@
+{
+ "case": "sparkline-table-keyword-trends",
+ "workflow": "keyword-research",
+ "endpoint": "POST /v3/dataforseo_labs/google/keyword_ideas/live (and other Labs keyword endpoints)",
+ "source": [
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-keyword-ideas.json",
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-keyword-suggestions.json",
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-top-searches.json",
+  "research/chart-fixtures/sources/sandbox-S1-keyword-ideas.json"
+ ],
+ "source_cost_usd": [
+  0.0105,
+  0.0105,
+  0.0105,
+  0
+ ],
+ "expect": "valid",
+ "notes": "The trend column holds arrays of 12 numbers: render as a sparkline. The last row is nearly flat (few distinct values); volumes span several orders of magnitude.",
+ "spec": {
+  "type": "table",
+  "title": "Keyword demand, last 12 months",
+  "subtitle": "Labs keyword_info.monthly_searches",
+  "x": [
+   "6youtube",
+   "yourb",
+   "youcine",
+   "youtube",
+   "yout8be",
+   "google keyword planner",
+   "nothing phone",
+   "tin can phone",
+   "seo engine optimization",
+   "6youtube"
+  ],
+  "series": [
+   {
+    "name": "search_volume",
+    "values": [
+     226000000,
+     226000000,
+     226000000,
+     226000000,
+     226000000,
+     201000,
+     165000,
+     135000,
+     110000,
+     226000000
+    ]
+   },
+   {
+    "name": "trend",
+    "values": [
+     [
+      185000000,
+      185000000,
+      226000000,
+      226000000,
+      277000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000
+     ],
+     [
+      185000000,
+      185000000,
+      226000000,
+      226000000,
+      277000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000
+     ],
+     [
+      185000000,
+      185000000,
+      226000000,
+      226000000,
+      277000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000
+     ],
+     [
+      185000000,
+      185000000,
+      226000000,
+      226000000,
+      277000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000
+     ],
+     [
+      185000000,
+      185000000,
+      226000000,
+      226000000,
+      277000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000
+     ],
+     [
+      201000,
+      673000,
+      823000,
+      110000,
+      60500,
+      49500,
+      33100,
+      33100,
+      40500,
+      49500,
+      49500,
+      49500
+     ],
+     [
+      110000,
+      90500,
+      110000,
+      110000,
+      110000,
+      165000,
+      110000,
+      165000,
+      301000,
+      246000,
+      301000,
+      246000
+     ],
+     [
+      60500,
+      74000,
+      165000,
+      135000,
+      90500,
+      135000,
+      165000,
+      135000,
+      165000,
+      165000,
+      201000,
+      201000
+     ],
+     [
+      165000,
+      135000,
+      110000,
+      135000,
+      201000,
+      110000,
+      110000,
+      90500,
+      110000,
+      90500,
+      74000,
+      60500
+     ],
+     [
+      185000000,
+      185000000,
+      226000000,
+      226000000,
+      277000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000,
+      226000000
+     ]
+    ]
+   }
+  ],
+  "unit": "searches",
+  "sort": "desc:search_volume",
+  "limit": 10
+ }
+}

@@ -1,0 +1,56 @@
+{
+ "case": "kpi-rank-overview-with-previous",
+ "workflow": "competitor-gap-analysis",
+ "endpoint": "POST /v3/dataforseo_labs/google/historical_rank_overview/live",
+ "source": "research/chart-fixtures/sources/sandbox-S9-historical-rank-overview.json",
+ "source_cost_usd": 0,
+ "expect": "valid",
+ "notes": "values = [current, previous]; etv is a float; some metrics go down (render negative deltas).",
+ "spec": {
+  "type": "kpi",
+  "title": "Organic visibility, month over month",
+  "subtitle": "2026-10 vs 2026-09",
+  "x": [],
+  "series": [
+   {
+    "name": "count",
+    "values": [
+     9528,
+     11161
+    ]
+   },
+   {
+    "name": "etv",
+    "values": [
+     14961.92980338486,
+     15027.54878546622
+    ]
+   },
+   {
+    "name": "pos_1",
+    "values": [
+     48,
+     38
+    ]
+   },
+   {
+    "name": "is_new",
+    "values": [
+     7839,
+     9069
+    ]
+   },
+   {
+    "name": "is_lost",
+    "values": [
+     3727,
+     1612
+    ],
+    "lower_is_better": true
+   }
+  ],
+  "unit": null,
+  "sort": "none",
+  "limit": 5
+ }
+}

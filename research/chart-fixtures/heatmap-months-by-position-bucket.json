@@ -1,0 +1,92 @@
+{
+ "case": "heatmap-months-by-position-bucket",
+ "workflow": "competitor-gap-analysis",
+ "endpoint": "POST /v3/dataforseo_labs/google/historical_rank_overview/live",
+ "source": "research/chart-fixtures/sources/sandbox-S9-historical-rank-overview.json",
+ "source_cost_usd": 0,
+ "expect": "valid",
+ "notes": "6 x 7, all numeric; higher is more.",
+ "spec": {
+  "type": "heatmap",
+  "title": "Keywords per position bucket per month",
+  "subtitle": "no nulls",
+  "rows": [
+   "2026-05",
+   "2026-06",
+   "2026-07",
+   "2026-08",
+   "2026-09",
+   "2026-10"
+  ],
+  "cols": [
+   "pos_1",
+   "pos_2_3",
+   "pos_4_10",
+   "pos_11_20",
+   "pos_21_30",
+   "pos_31_40",
+   "pos_41_50"
+  ],
+  "values": [
+   [
+    41,
+    83,
+    630,
+    566,
+    412,
+    283,
+    187
+   ],
+   [
+    42,
+    75,
+    484,
+    730,
+    540,
+    318,
+    212
+   ],
+   [
+    38,
+    75,
+    441,
+    814,
+    567,
+    332,
+    245
+   ],
+   [
+    37,
+    81,
+    491,
+    824,
+    558,
+    340,
+    260
+   ],
+   [
+    38,
+    140,
+    1462,
+    2663,
+    2264,
+    1643,
+    1193
+   ],
+   [
+    48,
+    146,
+    1223,
+    2259,
+    1941,
+    1384,
+    1042
+   ]
+  ],
+  "x": [],
+  "series": [],
+  "unit": "keywords",
+  "sort": "none",
+  "limit": 49
+ }
+}

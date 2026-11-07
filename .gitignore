@@ -1,0 +1,23 @@
+# Dependencies and build output
+node_modules/
+dist/
+.turbo/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets
+.env
+.env.*
+
+# Local working notes, kept out of the repo
+/PLAN.md
+/research/*.md
+!/research/resources.md
+!/research/endpoints.md
+/research/live-endpoint-test.json
+/research/notes/
+/Brain/_review/
+.directory
+/docs/readme/build/
+/docs/readme/preview.html

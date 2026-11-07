@@ -1,0 +1,20 @@
+Draw a chart or table of DataForSEO results in the user's terminal. Use it whenever a result has 3 or more numbers worth comparing; do not describe numeric series in prose.
+
+Pick the type from the workflow's "Visuals" section when there is one, and pass that workflow's name as `workflow`. The tool rejects a view drawn before the workflow's defaults unless you set `skip_defaults_reason`:
+- table: x = row labels, series = columns (a column whose values are number arrays renders as sparklines).
+  Example: { type: "table", x: ["example.com", "rival.com"], series: [{ name: "Position", values: [3, 7] }, { name: "ETV", values: [1200, 640] }] }.
+  Tables never use rows, cols or values; those are for heatmap only.
+- kpi: series = [{ name, values: [current, previous?], lower_is_better? }] (set lower_is_better on lost links, cost, position)
+- hbar: x = labels, one series (rankings, top pages, top domains)
+- grouped-bar: x = labels, 2 or more series (you vs competitors)
+- share-bar: x = parts, one series of counts or shares (SERP feature share, intent mix)
+- diverging-bar: x = dates, exactly 2 series [positive, negative] (new vs lost backlinks)
+- line: x = dates or months, 1 or more series (search volume, rank over time)
+- sparkline: series = one trend per name
+- scatter: series values are [x, y] pairs; set x_label and y_label (difficulty vs volume); log scale is automatic for wide ranges
+- heatmap: rows, cols, values[][] with null for no value; set lower_is_better for ranks
+- geogrid: values[][] = the business's rank at each grid point (null = not found), center = [row, col] of the business; drawn as colored map tiles with top 3 share, coverage and average rank (local rank grids)
+- tilemap: x = US state names or codes, one series (interest or volume by state); drawn as a US tile map
+- scatter points can carry names: series[].labels = one label per point (shown on hover)
+
+Rules: take numbers straight from the API response, never retype or round them yourself. Set unit ("$", "%", or a word), sort and limit (default top 15 for bars). Write source as "<endpoint>, billed $<tasks[].cost>" (for example "/v3/serp/google/organic/live/advanced, billed $0.002"), or "<endpoint>, sandbox, dummy data" for sandbox responses. One chart per call; call it again for another view.

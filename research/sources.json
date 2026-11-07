@@ -1,0 +1,192 @@
+{
+  "checked": "2026-11-06",
+  "sources": [
+    {
+      "id": "openapi",
+      "url": "https://github.com/dataforseo/OpenApiDocumentation/blob/main/openapi_specification.yaml",
+      "what": "Official OpenAPI 3.0.1 spec, 565 operations, 12 tags",
+      "version": "commit 55a4ed09d5295c96040a931449819d6e22418558, committed 2026-10-26",
+      "retrieved": "2026-11-06",
+      "used_for": "path, method, operation_id, purpose, params"
+    },
+    {
+      "id": "docs-index",
+      "url": "https://docs.dataforseo.com/v3/llms.txt",
+      "what": "Official docs index for LLMs, 617 page links in 13 sections",
+      "retrieved": "2026-11-06",
+      "used_for": "docs URL per endpoint, discovery of docs-only endpoints"
+    },
+    {
+      "id": "docs-pages",
+      "url": "https://docs.dataforseo.com/v3/{page}.md",
+      "what": "Markdown version of each docs page (frontmatter date 2026-11-05 on most pages); 4 pages without .md read as HTML",
+      "retrieved": "2026-11-06",
+      "used_for": "limits, free flag, per-request prices, deprecation notices"
+    },
+    {
+      "id": "docs-errors",
+      "url": "https://docs.dataforseo.com/v3/appendix/errors/",
+      "what": "Error codes, including 40202 rate limit (10000 per minute) and 40209 (30 simultaneous)",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "docs-tasks-ready",
+      "url": "https://docs.dataforseo.com/v3/serp/google/organic/tasks_ready/",
+      "what": "tasks_ready: up to 20 API calls per minute",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "docs-google-ads-live",
+      "url": "https://docs.dataforseo.com/v3/keywords_data/google_ads/search_volume/live/",
+      "what": "Google Ads Live: no more than 12 requests per minute per account",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "docs-user-data",
+      "url": "https://docs.dataforseo.com/v3/appendix/user_data/",
+      "what": "user_data: free; returns account prices, rates and limits",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "docs-status",
+      "url": "https://docs.dataforseo.com/v3/appendix/status/",
+      "what": "status: no more than 10 requests per minute",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "docs-events-deprecated",
+      "url": "https://docs.dataforseo.com/v3/serp/google/events/overview/",
+      "what": "Google Events deprecated banner",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "docs-amazon-reviews",
+      "url": "https://docs.dataforseo.com/v3/merchant/amazon/reviews/task_post/",
+      "what": "Amazon Reviews: 'temporarily unavailable' notice, orphaned page",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "docs-llm-mentions-legacy",
+      "url": "https://docs.dataforseo.com/v3/ai_optimization/llm_mentions/search/live/",
+      "what": "Legacy LLM Mentions page with replacement notice (same for aggregated_metrics, cross_aggregated_metrics, top_domains, top_pages)",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "docs-llm-mentions-search",
+      "url": "https://docs.dataforseo.com/v3/ai_optimization/llm_mentions/search_mentions/live/",
+      "what": "Platforms google and chat_gpt; chat_gpt data United States only",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "docs-models",
+      "url": "https://docs.dataforseo.com/v3/ai_optimization/claude/llm_responses/models/",
+      "what": "Example model lists (also chat_gpt, gemini, perplexity); live list needs the free /models call",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "content-generation-gone",
+      "url": "https://docs.dataforseo.com/v3/content_generation/overview/",
+      "what": "404; https://dataforseo.com/apis/content-generation-api redirects to /apis/content-analysis-api",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "pricing-hub",
+      "url": "https://dataforseo.com/pricing",
+      "what": "Pricing hub: $50 minimum top-up, $1 trial credit, balance never expires",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "pricing-pages",
+      "url": "https://dataforseo.com/pricing/{product}",
+      "what": "76 pricing pages, 154 unique rows (endpoint glob, mode, unit, price)",
+      "retrieved": "2026-11-06",
+      "used_for": "price tiers per endpoint"
+    },
+    {
+      "id": "pricing-serp-organic",
+      "url": "https://dataforseo.com/pricing/google-serp/google-organic-serp-api",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "pricing-backlinks",
+      "url": "https://dataforseo.com/pricing/backlinks/backlinks",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "pricing-labs-google",
+      "url": "https://dataforseo.com/pricing/dataforseo-labs/dataforseo-google-api",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "pricing-llm-mentions",
+      "url": "https://dataforseo.com/pricing/ai-optimization/llm-mentions",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "pricing-llm-responses",
+      "url": "https://dataforseo.com/pricing/ai-optimization/llm-responses",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "pricing-llm-scraper",
+      "url": "https://dataforseo.com/pricing/ai-optimization/llm-scraper",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "mcp-v3-repo",
+      "url": "https://github.com/dataforseo/mcp-server-typescript",
+      "what": "Official MCP server v3 (README, package.json 3.1.3, src/config, src/core/tools)",
+      "version": "commit e41e1b002397600bcd11413f763bb86fbf5f4861, 2026-11-02",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "mcp-v2-repo",
+      "url": "https://github.com/dataforseo/mcp-server-typescript-deprecated",
+      "what": "Deprecated v2 MCP server, 90 tools across 10 modules",
+      "version": "commit a89b4aa9d3c1eb5036d7ebaf59ad73cadb07a30f, 2026-11-02, package 2.9.14",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "npm",
+      "url": "https://registry.npmjs.org/dataforseo-mcp-server",
+      "what": "latest 3.1.3 published 2026-10-02; engines node >=22; last 2.x on npm 2.9.13 (2026-08-11)",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "mcp-hosted",
+      "url": "https://mcp.dataforseo.com/v3/mcp",
+      "what": "Hosted v3 MCP; OAuth metadata at https://mcp.dataforseo.com/v3/.well-known/oauth-protected-resource (auth server https://data.dataforseo.com). v2 hosted at https://mcp.dataforseo.com/mcp still answers.",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "pricing-update-2026-07-01",
+      "url": "https://dataforseo.com/update/pricing-update-in-dataforseo-apis",
+      "what": "Official notice dated July 1, 2026: about +20% across eight APIs with listed exceptions; $100 monthly commitments for Backlinks and LLM Mentions removed",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "docs-auth",
+      "url": "https://docs.dataforseo.com/v3/auth/",
+      "what": "Basic auth; API password generated in API Access tab, differs from account password",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "docs-sandbox",
+      "url": "https://docs.dataforseo.com/v3/appendix/sandbox/",
+      "what": "Sandbox free for registered users, dummy data, identical structure",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "updates-feed",
+      "url": "https://dataforseo.com/feed?post_type=update",
+      "what": "Official API updates RSS; includes 2026-10-19 Default API Rate Limit Increased to 10,000 Requests per Minute",
+      "retrieved": "2026-11-06"
+    },
+    {
+      "id": "sandbox-run",
+      "url": "https://sandbox.dataforseo.com/v3/",
+      "what": "15 endpoints sandbox-verified (research/sandbox-checks.md)",
+      "retrieved": "2026-11-06"
+    }
+  ]
+}

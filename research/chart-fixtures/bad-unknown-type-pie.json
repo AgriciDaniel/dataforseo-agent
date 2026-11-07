@@ -1,0 +1,40 @@
+{
+ "case": "bad-unknown-type-pie",
+ "workflow": "serp-snapshot",
+ "endpoint": "POST /v3/serp/google/organic/live/advanced",
+ "source": "Brain/.raw/sources/dataforseo-research/serp/fixtures/google-organic.json",
+ "source_cost_usd": 0.002,
+ "expect": "error: unknown type \"pie\" (no pies; use share-bar)",
+ "notes": "",
+ "spec": {
+  "type": "pie",
+  "title": "SERP composition as a pie",
+  "subtitle": "unsupported type",
+  "x": [
+   "ai_overview",
+   "organic",
+   "people_also_ask",
+   "people_also_search",
+   "product_considerations",
+   "perspectives",
+   "related_searches"
+  ],
+  "series": [
+   {
+    "name": "elements",
+    "values": [
+     1,
+     8,
+     1,
+     1,
+     1,
+     1,
+     1
+    ]
+   }
+  ],
+  "unit": "elements",
+  "sort": "desc",
+  "limit": 7
+ }
+}

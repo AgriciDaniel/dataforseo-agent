@@ -1,0 +1,103 @@
+{
+ "case": "heatmap-7x7-local-grid-with-nulls",
+ "workflow": "local-seo-tracking",
+ "endpoint": "POST /v3/serp/google/maps/live/advanced",
+ "source": "research/chart-fixtures/sources/sandbox-S4-google-maps.json",
+ "source_cost_usd": 0,
+ "expect": "valid",
+ "notes": "Built from one Maps response: listings binned by latitude and longitude into 7 x 7 cells, cell = best rank_group in that cell, null = no listing (27 null cells). A live local grid would instead run one request per grid point (see the local-seo-tracking workflow); the shape and nulls are what matter here. Lower is better: invert the colour scale.",
+ "spec": {
+  "type": "heatmap",
+  "title": "Best map position by area",
+  "subtitle": "7 x 7 grid, north at top, lower is better",
+  "rows": [
+   "r1",
+   "r2",
+   "r3",
+   "r4",
+   "r5",
+   "r6",
+   "r7"
+  ],
+  "cols": [
+   "c1",
+   "c2",
+   "c3",
+   "c4",
+   "c5",
+   "c6",
+   "c7"
+  ],
+  "values": [
+   [
+    null,
+    null,
+    null,
+    100,
+    null,
+    78,
+    null
+   ],
+   [
+    null,
+    null,
+    null,
+    40,
+    null,
+    null,
+    null
+   ],
+   [
+    35,
+    88,
+    47,
+    36,
+    58,
+    81,
+    null
+   ],
+   [
+    null,
+    44,
+    14,
+    1,
+    66,
+    86,
+    67
+   ],
+   [
+    99,
+    null,
+    48,
+    57,
+    34,
+    72,
+    null
+   ],
+   [
+    null,
+    null,
+    null,
+    27,
+    null,
+    null,
+    null
+   ],
+   [
+    84,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ]
+  ],
+  "x": [],
+  "series": [],
+  "unit": "position",
+  "sort": "asc",
+  "limit": 49,
+  "lower_is_better": true
+ }
+}

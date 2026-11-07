@@ -1,0 +1,538 @@
+{
+ "case": "scatter-rating-vs-reviews",
+ "workflow": "local-seo-tracking",
+ "endpoint": "POST /v3/serp/google/maps/live/advanced",
+ "source": "research/chart-fixtures/sources/sandbox-S4-google-maps.json",
+ "source_cost_usd": 0,
+ "expect": "valid",
+ "notes": "102 points; y is bunched between about 3.5 and 5; many overlapping points.",
+ "spec": {
+  "type": "scatter",
+  "title": "Rating vs review count",
+  "subtitle": "Google Maps \"pizza\"",
+  "x": [
+   "Gordon Ramsay Street Pizza - St Paul's",
+   "Lievito Madre Italian Restaurant & Pizzeria",
+   "50 Kalò di Ciro Salvo Pizzeria London🍕",
+   "PizzaExpress",
+   "Fatto a Mano Covent Garden",
+   "Vasiniko",
+   "Bella Italia - Irving Street",
+   "Pizzeria",
+   "Chill Since '93 - Covent Garden",
+   "Lenny’s Apizza",
+   "Pizza Pilgrims Covent Garden",
+   "Ave Mario",
+   "Crust Bros Pizza Covent Garden",
+   "Vasiniko",
+   "Franco Manca Covent Garden",
+   "PizzaExpress",
+   "Pizza Hut Restaurants Strand, London",
+   "Breadstall Pizza",
+   "'O Ver Piccadilly - Italian Restaurant",
+   "Rudy's Pizza Napoletana",
+   "ICCO Pizza - Soho",
+   "Bad Boy Pizza Society | Seven Dials",
+   "Gracey's Pizza",
+   "Carmy's Pizza",
+   "Sartori Italian Restaurant & Pizzeria",
+   "Pizza Pilgrims Carnaby",
+   "Pizza Union Holborn",
+   "PizzaExpress",
+   "The Rose Pizzeria",
+   "Zizzi Italian Restaurant The Strand (West End)",
+   "Pizza Hut Restaurants Leicester Square",
+   "Ecco Pizza",
+   "Japes Pizza Soho",
+   "Prima Sapori d'Italia 🇮🇹",
+   "Rudy's Pizza Napoletana - Tottenham Court Road",
+   "Pizza Pilgrims Waterloo",
+   "Pizza Way - Edgware road",
+   "Nonna Selena Pizzeria",
+   "Pizza Pilgrims Soho",
+   "Berberè Pizzeria",
+   "L'Antica Pizzeria da Michele",
+   "Pizza Lads",
+   "Franco Manca Aldwych",
+   "Spizza Napoletana America Street",
+   "Homeslice Neal's Yard",
+   "Florencio Pizza",
+   "Pizza Pilgrims Selfridges",
+   "La Porchetta Pollo Bar",
+   "Santa Maria Pizzeria Fitzrovia",
+   "Mio Casa",
+   "Ecco Pizzas",
+   "Spring Street Pizza",
+   "Pizzeria Cafe",
+   "Pizza Hut",
+   "Crust Bros Pizza Waterloo",
+   "Pizza Pilgrims Victoria",
+   "PizzaExpress",
+   "Pizza Pilgrims Euston",
+   "PizzaExpress",
+   "Bella Crust (Pizza)",
+   "Pane Cunzato - Italian Pizza Restaurant",
+   "Pixxa - Pizza al taglio",
+   "PizzaExpress",
+   "Euston Pizza Co",
+   "Green Mosaic Pizza Holborn",
+   "LOCKES | Bar | Covent Garden",
+   "ICCO Pizza - Fitzrovia",
+   "Mr Pizza Baby",
+   "East Pizzeria",
+   "Delfino",
+   "PizzaExpress",
+   "Pizza Sophia",
+   "Pizza Union King's Cross",
+   "Dough Pizza",
+   "Lost Souls Pizza Camden",
+   "Gourmet Pizza Co",
+   "Bad Boy Pizza Society | Vinegar Yard",
+   "PizzaExpress",
+   "La Cucina Di Mamma",
+   "Oi Vita Pizzeria",
+   "Pizza Pilgrims Exmouth Market",
+   "Wildwood Covent Garden Italian Restaurant | Pizza, Pasta & Grill",
+   "081 Pizzeria Shoreditch",
+   "Franco Manca Soho",
+   "Pizza Halal",
+   "Pizzeria Al Forno Van London",
+   "Pizza Pilgrims London Bridge",
+   "Pizza Pilgrims Liverpool Street",
+   "Bar Remo 🇮🇹",
+   "Alley Cats Pizza",
+   "Zizzi Italian Restaurant Bow Street (Covent Garden)",
+   "PizzaLuxe Pizza Restaurant & Bar Principal Place",
+   "Sourdough Pizzas",
+   "Hip Hop Pizza Shop",
+   "Papa Johns Pizza",
+   "Domino's Pizza - London - High Holborn",
+   "PizzaExpress",
+   "L'Antica Pizzeria da Michele",
+   "Pizza Social Club",
+   "Pizza Union Hoxton",
+   "Lords Burger and Pizza (Halal)",
+   "Pizza Da Milano"
+  ],
+  "x_label": "votes_count (log)",
+  "y_label": "rating",
+  "series": [
+   {
+    "name": "places",
+    "values": [
+     [
+      3179,
+      4.3
+     ],
+     [
+      574,
+      4.3
+     ],
+     [
+      6222,
+      4.5
+     ],
+     [
+      3697,
+      4.4
+     ],
+     [
+      2064,
+      4.7
+     ],
+     [
+      3252,
+      4.9
+     ],
+     [
+      4392,
+      4.5
+     ],
+     [
+      22,
+      4
+     ],
+     [
+      562,
+      4.8
+     ],
+     [
+      145,
+      4.9
+     ],
+     [
+      6193,
+      4.6
+     ],
+     [
+      30989,
+      4.8
+     ],
+     [
+      1634,
+      4.7
+     ],
+     [
+      8095,
+      4.9
+     ],
+     [
+      6788,
+      4.6
+     ],
+     [
+      1973,
+      4.3
+     ],
+     [
+      3843,
+      4
+     ],
+     [
+      1581,
+      4.7
+     ],
+     [
+      1069,
+      4.6
+     ],
+     [
+      4296,
+      4.7
+     ],
+     [
+      702,
+      4.7
+     ],
+     [
+      403,
+      4.4
+     ],
+     [
+      150,
+      4.6
+     ],
+     [
+      296,
+      4.5
+     ],
+     [
+      3655,
+      4.4
+     ],
+     [
+      16179,
+      4.8
+     ],
+     [
+      2224,
+      4.7
+     ],
+     [
+      2043,
+      4.1
+     ],
+     [
+      146,
+      4.8
+     ],
+     [
+      4536,
+      4.6
+     ],
+     [
+      3266,
+      4
+     ],
+     [
+      1060,
+      4.5
+     ],
+     [
+      6229,
+      4.7
+     ],
+     [
+      1256,
+      4.5
+     ],
+     [
+      1850,
+      4.8
+     ],
+     [
+      7303,
+      4.8
+     ],
+     [
+      73,
+      4.9
+     ],
+     [
+      5083,
+      4.7
+     ],
+     [
+      6778,
+      4.7
+     ],
+     [
+      731,
+      4.7
+     ],
+     [
+      3985,
+      4.3
+     ],
+     [
+      78,
+      4.9
+     ],
+     [
+      4729,
+      4.7
+     ],
+     [
+      254,
+      4.9
+     ],
+     [
+      3818,
+      4.4
+     ],
+     [
+      439,
+      4.8
+     ],
+     [
+      2852,
+      4.8
+     ],
+     [
+      2797,
+      4.5
+     ],
+     [
+      2419,
+      4.6
+     ],
+     [
+      1741,
+      4.8
+     ],
+     [
+      266,
+      4.7
+     ],
+     [
+      1022,
+      4.8
+     ],
+     [
+      12,
+      5
+     ],
+     [
+      4377,
+      3.9
+     ],
+     [
+      5196,
+      4.6
+     ],
+     [
+      5723,
+      4.7
+     ],
+     [
+      1529,
+      4.3
+     ],
+     [
+      3372,
+      4.9
+     ],
+     [
+      2713,
+      4.2
+     ],
+     [
+      121,
+      4.9
+     ],
+     [
+      2518,
+      4.6
+     ],
+     [
+      428,
+      4.5
+     ],
+     [
+      4346,
+      4.5
+     ],
+     [
+      83,
+      4.6
+     ],
+     [
+      321,
+      4.7
+     ],
+     [
+      879,
+      4.7
+     ],
+     [
+      4784,
+      4.4
+     ],
+     [
+      30,
+      4.7
+     ],
+     [
+      110,
+      4.8
+     ],
+     [
+      1689,
+      4.5
+     ],
+     [
+      1125,
+      4.1
+     ],
+     [
+      1500,
+      4.6
+     ],
+     [
+      7304,
+      4.6
+     ],
+     [
+      7,
+      4.7
+     ],
+     [
+      1444,
+      4.7
+     ],
+     [
+      3537,
+      4.5
+     ],
+     [
+      206,
+      4.7
+     ],
+     [
+      3466,
+      4.5
+     ],
+     [
+      2702,
+      4.3
+     ],
+     [
+      1508,
+      4.9
+     ],
+     [
+      2664,
+      4.7
+     ],
+     [
+      1674,
+      4.3
+     ],
+     [
+      487,
+      4.7
+     ],
+     [
+      3883,
+      4.5
+     ],
+     [
+      124,
+      4.3
+     ],
+     [
+      1051,
+      4.9
+     ],
+     [
+      7605,
+      4.7
+     ],
+     [
+      4710,
+      4.8
+     ],
+     [
+      2318,
+      4.6
+     ],
+     [
+      2176,
+      4.5
+     ],
+     [
+      3180,
+      4.4
+     ],
+     [
+      188,
+      4.5
+     ],
+     [
+      46,
+      4.4
+     ],
+     [
+      5,
+      4.4
+     ],
+     [
+      262,
+      4
+     ],
+     [
+      608,
+      3.8
+     ],
+     [
+      1816,
+      4.4
+     ],
+     [
+      5465,
+      4.1
+     ],
+     [
+      77,
+      4.7
+     ],
+     [
+      1342,
+      4.6
+     ],
+     [
+      438,
+      4.5
+     ],
+     [
+      571,
+      4.8
+     ]
+    ]
+   }
+  ],
+  "unit": null,
+  "sort": "none",
+  "limit": 120
+ }
+}

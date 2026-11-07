@@ -1,0 +1,84 @@
+import { describe, expect, test } from "bun:test"
+import { Effect } from "effect"
+import { Plugin } from "@dataforseo-agent/core/plugin"
+import { PluginHost } from "@dataforseo-agent/core/plugin/host"
+import { ProviderPlugins } from "@dataforseo-agent/core/plugin/provider"
+import { NvidiaPlugin } from "@dataforseo-agent/core/plugin/provider/nvidia"
+import { Provider } from "@dataforseo-agent/core/provider"
+import { testEffect } from "../lib/effect"
+import { PluginTestLayer } from "./fixture"
+
+const it = testEffect(PluginTestLayer)
+
+const addPlugin = Effect.fn(function* () {
+  const plugin = yield* Plugin.Service
+  const host = yield* PluginHost.make(plugin, "test")
+  yield* NvidiaPlugin.effect(host)
+})
+
+describe("NvidiaPlugin", () => {
+  test("is registered so legacy referer headers can be applied", () => {
+    expect(ProviderPlugins.map((item) => item.id)).toContain("dataforseo-agent.provider.nvidia")
+  })
+
+  it.effect("applies NVIDIA tracking headers only to nvidia", () =>
+    Effect.gen(function* () {
+      const catalog = yield* Provider.Service
+      yield* catalog.transform((catalog) => {
+        catalog.update(Provider.ID.make("nvidia"), (provider) => {
+          provider.package = "@dataforseo-agent/ai/providers/openai-compatible"
+          provider.settings = { baseURL: "https://integrate.api.nvidia.com/v1" }
+          provider.headers = { Existing: "value" }
+        })
+        catalog.update(Provider.ID.openrouter, () => {})
+      })
+      yield* addPlugin()
+      expect((yield* catalog.get(Provider.ID.make("nvidia")))?.headers).toEqual({
+        Existing: "value",
+        "HTTP-Referer": "https://github.com/AgriciDaniel/dataforseo-agent",
+        "X-Title": "DataForSEO Agent",
+        "X-BILLING-INVOKE-ORIGIN": "DataForSEO Agent",
+      })
+      expect((yield* catalog.get(Provider.ID.openrouter))?.headers).toBeUndefined()
+    }),
+  )
+
+  it.effect("adds billing origin for custom NVIDIA endpoints", () =>
+    Effect.gen(function* () {
+      const catalog = yield* Provider.Service
+      yield* catalog.transform((catalog) => {
+        catalog.update(Provider.ID.make("nvidia"), (provider) => {
+          provider.package = "@dataforseo-agent/ai/providers/openai-compatible"
+          provider.settings = { baseURL: "https://integrate.api.nvidia.com/v1" }
+        })
+      })
+      yield* addPlugin()
+
+      expect((yield* catalog.get(Provider.ID.make("nvidia")))?.headers).toEqual({
+        "HTTP-Referer": "https://github.com/AgriciDaniel/dataforseo-agent",
+        "X-Title": "DataForSEO Agent",
+        "X-BILLING-INVOKE-ORIGIN": "DataForSEO Agent",
+      })
+    }),
+  )
+
+  it.effect("preserves an explicit NVIDIA billing origin header", () =>
+    Effect.gen(function* () {
+      const catalog = yield* Provider.Service
+      yield* catalog.transform((catalog) => {
+        catalog.update(Provider.ID.make("nvidia"), (provider) => {
+          provider.package = "@dataforseo-agent/ai/providers/openai-compatible"
+          provider.settings = { baseURL: "https://integrate.api.nvidia.com/v1" }
+          provider.headers = { "X-BILLING-INVOKE-ORIGIN": "CustomOrigin" }
+        })
+      })
+      yield* addPlugin()
+
+      expect((yield* catalog.get(Provider.ID.make("nvidia")))?.headers).toEqual({
+        "HTTP-Referer": "https://github.com/AgriciDaniel/dataforseo-agent",
+        "X-Title": "DataForSEO Agent",
+        "X-BILLING-INVOKE-ORIGIN": "CustomOrigin",
+      })
+    }),
+  )
+})

@@ -1,0 +1,128 @@
+{
+ "case": "table-ranked-keywords-8-columns-long-urls",
+ "workflow": "competitor-gap-analysis",
+ "endpoint": "POST /v3/dataforseo_labs/google/ranked_keywords/live",
+ "source": [
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-ranked-keywords.json",
+  "research/chart-fixtures/sources/sandbox-S5-ranked-keywords.json"
+ ],
+ "source_cost_usd": [
+  0.0105,
+  0
+ ],
+ "expect": "valid",
+ "notes": "8 columns (keyword plus 7). URLs are long; cpc and keyword_difficulty contain nulls; mixed string and number columns.",
+ "spec": {
+  "type": "table",
+  "title": "Keywords dataforseo.com ranks for",
+  "subtitle": "Google US, Labs ranked keywords",
+  "x": [
+   "1000 keywords",
+   "api for seo",
+   "backlink checker api",
+   "backlinks api",
+   "data for seo",
+   "alternatives to google trends",
+   "amazon search volume api",
+   "api for seo software projects"
+  ],
+  "series": [
+   {
+    "name": "position",
+    "values": [
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ],
+    "lower_is_better": true
+   },
+   {
+    "name": "search_volume",
+    "values": [
+     50,
+     590,
+     70,
+     210,
+     720,
+     30,
+     20,
+     40
+    ]
+   },
+   {
+    "name": "cpc",
+    "values": [
+     null,
+     21.790000915527344,
+     null,
+     15.180000305175781,
+     1.1399999856948853,
+     20.049999237060547,
+     null,
+     null
+    ]
+   },
+   {
+    "name": "keyword_difficulty",
+    "values": [
+     32,
+     28,
+     12,
+     29,
+     18,
+     6,
+     0,
+     9
+    ],
+    "lower_is_better": true
+   },
+   {
+    "name": "etv",
+    "values": [
+     15.199999809265137,
+     136.3135986328125,
+     21.280000686645508,
+     63.84000015258789,
+     218.8800048828125,
+     0.3046264052391052,
+     9.909302711486816,
+     0.6778327226638794
+    ]
+   },
+   {
+    "name": "main_intent",
+    "values": [
+     "informational",
+     "commercial",
+     "informational",
+     "informational",
+     "informational",
+     "informational",
+     "informational",
+     "commercial"
+    ]
+   },
+   {
+    "name": "url",
+    "values": [
+     "https://dataforseo.com/free-seo-stats/top-1000-keywords",
+     "https://dataforseo.com/",
+     "https://dataforseo.com/apis/backlinks-api",
+     "https://dataforseo.com/apis/backlinks-api",
+     "https://dataforseo.com/",
+     "https://trends.dataforseo.com/",
+     "https://dataforseo.com/help-center/get-keyword-search-volume-data-for-amazon",
+     "https://dataforseo.com/"
+    ]
+   }
+  ],
+  "unit": null,
+  "sort": "asc:position",
+  "limit": 25
+ }
+}

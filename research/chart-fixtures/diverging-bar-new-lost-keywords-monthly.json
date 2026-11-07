@@ -1,0 +1,50 @@
+{
+ "case": "diverging-bar-new-lost-keywords-monthly",
+ "workflow": "competitor-gap-analysis",
+ "endpoint": "POST /v3/dataforseo_labs/google/historical_rank_overview/live",
+ "source": "research/chart-fixtures/sources/sandbox-S9-historical-rank-overview.json",
+ "source_cost_usd": 0,
+ "expect": "valid",
+ "notes": "Only 6 periods; values are large on both sides.",
+ "spec": {
+  "type": "diverging-bar",
+  "title": "New vs lost ranking keywords",
+  "subtitle": "per month",
+  "x": [
+   "2026-05",
+   "2026-06",
+   "2026-07",
+   "2026-08",
+   "2026-09",
+   "2026-10"
+  ],
+  "series": [
+   {
+    "name": "is_new",
+    "values": [
+     968,
+     1344,
+     1503,
+     1537,
+     9069,
+     7839
+    ]
+   },
+   {
+    "name": "is_lost",
+    "values": [
+     2213,
+     1316,
+     827,
+     865,
+     1612,
+     3727
+    ],
+    "lower_is_better": true
+   }
+  ],
+  "unit": "keywords",
+  "sort": "none",
+  "limit": 12
+ }
+}

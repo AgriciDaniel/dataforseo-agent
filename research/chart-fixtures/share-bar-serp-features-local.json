@@ -1,0 +1,36 @@
+{
+ "case": "share-bar-serp-features-local",
+ "workflow": "serp-snapshot",
+ "endpoint": "POST /v3/serp/google/organic/live/advanced",
+ "source": "research/chart-fixtures/sources/sandbox-S3-google-organic.json",
+ "source_cost_usd": 0,
+ "expect": "valid",
+ "notes": "5 parts; sorted descending by the renderer.",
+ "spec": {
+  "type": "share-bar",
+  "title": "SERP composition",
+  "subtitle": "local intent SERP (sandbox)",
+  "x": [
+   "find_results_on",
+   "local_pack",
+   "organic",
+   "knowledge_graph",
+   "google_reviews"
+  ],
+  "series": [
+   {
+    "name": "elements",
+    "values": [
+     1,
+     3,
+     10,
+     1,
+     1
+    ]
+   }
+  ],
+  "unit": "elements",
+  "sort": "desc",
+  "limit": 7
+ }
+}

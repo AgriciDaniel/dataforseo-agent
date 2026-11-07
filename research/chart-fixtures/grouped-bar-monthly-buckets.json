@@ -1,0 +1,60 @@
+{
+ "case": "grouped-bar-monthly-buckets",
+ "workflow": "competitor-gap-analysis",
+ "endpoint": "POST /v3/dataforseo_labs/google/historical_rank_overview/live",
+ "source": "research/chart-fixtures/sources/sandbox-S9-historical-rank-overview.json",
+ "source_cost_usd": 0,
+ "expect": "valid",
+ "notes": "Date order on x; pos_4_10 dwarfs pos_1.",
+ "spec": {
+  "type": "grouped-bar",
+  "title": "Position buckets per month",
+  "subtitle": "one domain over time",
+  "x": [
+   "2026-05",
+   "2026-06",
+   "2026-07",
+   "2026-08",
+   "2026-09",
+   "2026-10"
+  ],
+  "series": [
+   {
+    "name": "pos_1",
+    "values": [
+     41,
+     42,
+     38,
+     37,
+     38,
+     48
+    ]
+   },
+   {
+    "name": "pos_2_3",
+    "values": [
+     83,
+     75,
+     75,
+     81,
+     140,
+     146
+    ]
+   },
+   {
+    "name": "pos_4_10",
+    "values": [
+     630,
+     484,
+     441,
+     491,
+     1462,
+     1223
+    ]
+   }
+  ],
+  "unit": "keywords",
+  "sort": "none",
+  "limit": 12
+ }
+}

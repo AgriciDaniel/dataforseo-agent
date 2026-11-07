@@ -1,0 +1,30 @@
+{
+ "case": "bad-line-fewer-than-3-points",
+ "workflow": "keyword-research",
+ "endpoint": "POST /v3/dataforseo_labs/google/keyword_ideas/live",
+ "source": "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-keyword-ideas.json",
+ "source_cost_usd": 0.0105,
+ "expect": "error: fewer than 3 points (visuals.md: never chart fewer than 3 points; answer in prose)",
+ "notes": "",
+ "spec": {
+  "type": "line",
+  "title": "Monthly searches (too short)",
+  "subtitle": "2 points",
+  "x": [
+   "2026-04",
+   "2026-05"
+  ],
+  "series": [
+   {
+    "name": "google keyword planner",
+    "values": [
+     49500,
+     49500
+    ]
+   }
+  ],
+  "unit": "searches",
+  "sort": "none",
+  "limit": 12
+ }
+}

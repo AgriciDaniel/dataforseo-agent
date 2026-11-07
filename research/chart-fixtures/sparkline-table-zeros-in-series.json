@@ -1,0 +1,166 @@
+{
+ "case": "sparkline-table-zeros-in-series",
+ "workflow": "rank-tracking",
+ "endpoint": "POST /v3/dataforseo_labs/google/ranked_keywords/live",
+ "source": [
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-ranked-keywords.json",
+  "research/chart-fixtures/sources/sandbox-S5-ranked-keywords.json"
+ ],
+ "source_cost_usd": [
+  0.0105,
+  0
+ ],
+ "expect": "valid",
+ "notes": "Some trend arrays contain 0 months; the sparkline must not divide by zero or drop the point.",
+ "spec": {
+  "type": "table",
+  "title": "Ranked keywords with demand trend",
+  "subtitle": "zeros inside the series",
+  "x": [
+   "1000 keywords",
+   "api for seo",
+   "backlink checker api",
+   "backlinks api",
+   "data for seo",
+   "alternatives to google trends",
+   "amazon search volume api",
+   "api for seo software projects"
+  ],
+  "series": [
+   {
+    "name": "position",
+    "values": [
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1,
+     1
+    ],
+    "lower_is_better": true
+   },
+   {
+    "name": "trend",
+    "values": [
+     [
+      170,
+      140,
+      50,
+      70,
+      20,
+      20,
+      10,
+      10,
+      0,
+      40,
+      50,
+      140
+     ],
+     [
+      1900,
+      1000,
+      590,
+      590,
+      590,
+      590,
+      1300,
+      110,
+      210,
+      110,
+      320,
+      260
+     ],
+     [
+      30,
+      10,
+      90,
+      390,
+      40,
+      170,
+      30,
+      30,
+      30,
+      10,
+      10,
+      20
+     ],
+     [
+      880,
+      390,
+      260,
+      210,
+      50,
+      40,
+      20,
+      40,
+      30,
+      50,
+      140,
+      170
+     ],
+     [
+      590,
+      480,
+      590,
+      480,
+      590,
+      720,
+      720,
+      390,
+      590,
+      720,
+      1000,
+      1000
+     ],
+     [
+      40,
+      30,
+      20,
+      20,
+      40,
+      20,
+      40,
+      30,
+      30,
+      10,
+      20,
+      20
+     ],
+     [
+      30,
+      10,
+      10,
+      20,
+      30,
+      20,
+      50,
+      70,
+      20,
+      10,
+      10,
+      10
+     ],
+     [
+      90,
+      70,
+      90,
+      30,
+      40,
+      20,
+      20,
+      20,
+      10,
+      20,
+      10,
+      10
+     ]
+    ]
+   }
+  ],
+  "unit": null,
+  "sort": "asc:position",
+  "limit": 10
+ }
+}

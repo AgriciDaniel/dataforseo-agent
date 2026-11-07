@@ -1,0 +1,500 @@
+{
+ "checked": "2026-11-06",
+ "source": "https://docs.dataforseo.com/v3/appendix/errors/",
+ "notes": [
+  "HTTP status is 200 for nearly everything; read the top-level status_code and each tasks[].status_code.",
+  "description is the official text; class, retry and agent_action are agent policy derived from it.",
+  "retry values: never (fix or stop), once (one resubmit), backoff (wait and slow down), later (retry after minutes), poll (task still running), n/a (not an error).",
+  "Never retry spend errors 40200, 40203, 40210; a retry of a live call is billed again.",
+  "40204 (subscription required) is no longer in the official table; Backlinks and LLM Mentions are pay as you go since 2026-07-01.",
+  "GET /v3/appendix/errors returns this list from the API for free."
+ ],
+ "codes": [
+  {
+   "code": "401",
+   "kind": "http",
+   "message": "Unauthorized",
+   "description": "You are not authorized to access this resource. See your login details here: https://app.dataforseo.com/api-access",
+   "class": "auth",
+   "retry": "never",
+   "agent_action": "Check DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD (API Access tab, not the account password)."
+  },
+  {
+   "code": "402",
+   "kind": "http",
+   "message": "Payment Required",
+   "description": "We had a problem billing your account. Please, check your account’s balance.",
+   "class": "payment",
+   "retry": "never",
+   "agent_action": "Stop. Tell the user to check the balance; do not retry."
+  },
+  {
+   "code": "404",
+   "kind": "http",
+   "message": "Not Found",
+   "description": "Requested endpoint not found",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "Wrong endpoint path; look it up in the catalog."
+  },
+  {
+   "code": "500",
+   "kind": "http",
+   "message": "Internal Server Error",
+   "description": "Sorry, we could not process your request due to the internal server error. Please, try again later.",
+   "class": "server",
+   "retry": "later",
+   "agent_action": "Retry later with backoff."
+  },
+  {
+   "code": "20000",
+   "kind": "internal",
+   "message": "ok.",
+   "description": "the request has been successfully completed",
+   "class": "success",
+   "retry": "n/a",
+   "agent_action": "Success. Read the result and report the cost field."
+  },
+  {
+   "code": "20100",
+   "kind": "internal",
+   "message": "task created.",
+   "description": "as a result of the successful request, the task has been created",
+   "class": "success",
+   "retry": "n/a",
+   "agent_action": "Task queued. Poll tasks_ready, then fetch with task_get."
+  },
+  {
+   "code": "40000",
+   "kind": "internal",
+   "message": "you can set only one task at a time.",
+   "description": "you cannot specify more than one task in the POST array",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "Live endpoints take one task per call; split the array."
+  },
+  {
+   "code": "40001",
+   "kind": "internal",
+   "message": "this id is used by another client, check the id.",
+   "description": "the task identifier id is unique to the client used to send the request",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "Use the task id returned to this account."
+  },
+  {
+   "code": "40002",
+   "kind": "internal",
+   "message": "this id is used by another search engine, check the path.",
+   "description": "the task identifier id is unique to the search engine used in the URL path of the request",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "Fetch the id from the same search engine path it was posted to."
+  },
+  {
+   "code": "40003",
+   "kind": "internal",
+   "message": "this id is used by another search type, check the path.",
+   "description": "the task identifier id is unique to the search type used in the URL path of the request",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "Fetch the id from the same search type path it was posted to."
+  },
+  {
+   "code": "40004",
+   "kind": "internal",
+   "message": "this id is used by another function, check the id.",
+   "description": "the task identifier id is unique to the function used in the URL path of the request",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "Fetch the id from the same function path it was posted to."
+  },
+  {
+   "code": "40006",
+   "kind": "internal",
+   "message": "you can set no more than 100 tasks at a time.",
+   "description": "each POST request can contain up to 100 tasks",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "Send at most 100 tasks per POST; split the batch."
+  },
+  {
+   "code": "40007",
+   "kind": "internal",
+   "message": "Notice containing recommendations for optimizing your API requests.",
+   "description": "notice can contain different personalized recommendations for optimizing your API requests based on your usage",
+   "class": "notice",
+   "retry": "n/a",
+   "agent_action": "Informational: read the optimization advice and pass it to the user."
+  },
+  {
+   "code": "40100",
+   "kind": "internal",
+   "message": "you are not authorized to access this resource. see your login details here: https://app.dataforseo.com/api-dashboard .",
+   "description": "check if the specified credentials match those in your account dashboard (https://app.dataforseo.com/api-dashboard)",
+   "class": "auth",
+   "retry": "never",
+   "agent_action": "Credentials rejected; check login and API password."
+  },
+  {
+   "code": "40101",
+   "kind": "internal",
+   "message": "internal se server error.",
+   "description": "the requested search engine was unable to process your request and responded with an error; learn more on our help center (https://dataforseo.com/help-center/what-does-the-40101-error-mean)",
+   "class": "upstream",
+   "retry": "once",
+   "agent_action": "Search engine error; resubmit once, then report."
+  },
+  {
+   "code": "40102",
+   "kind": "internal",
+   "message": "no search results.",
+   "description": "no results matching the details of your request have been found; learn more on our help center (https://dataforseo.com/help-center/what-does-the-40102-error-mean)",
+   "class": "no_data",
+   "retry": "never",
+   "agent_action": "No results for this query; report it as an empty result, not a failure. It can still be billed (live test 2026-11-06: ads_search and dataset_info charged), so do not resubmit the same input."
+  },
+  {
+   "code": "40103",
+   "kind": "internal",
+   "message": "task execution failed, please try to resubmit the task.",
+   "description": "the task could not be executed, try posting another task with similar parameters",
+   "class": "task",
+   "retry": "once",
+   "agent_action": "Resubmit the task once."
+  },
+  {
+   "code": "40104",
+   "kind": "internal",
+   "message": "please verify your account before using the api. you can complete the verification in the user panel: https://app.dataforseo.com/ .",
+   "description": "email and/or phone verification is required for new users; to use DataForSEO APIs, you have to complete the account verification process in the User Panel (https://app.dataforseo.com/)",
+   "class": "account",
+   "retry": "never",
+   "agent_action": "Account needs email or phone verification in the dashboard; tell the user."
+  },
+  {
+   "code": "40105",
+   "kind": "internal",
+   "message": "The task was deleted and is no longer available.",
+   "description": "the task that you are referring to has been deleted from our system",
+   "class": "task",
+   "retry": "never",
+   "agent_action": "Task deleted; post a new task if still needed (costs money: re-estimate and ask)."
+  },
+  {
+   "code": "40106",
+   "kind": "internal",
+   "message": "Task completed with partial results. Some pages could not be retrieved after several retry attempts. You have not been charged for the pages that were not returned.",
+   "description": "the task has been completed successfully, but we could not parse some of the requested results; for example, if you set a task to retrieve 100 SERP results, but we only parsed 80 results, you will get 80 results with this error, without being charged for the remaining 20 unparsed results",
+   "class": "partial",
+   "retry": "n/a",
+   "agent_action": "Partial results; unretrieved pages were not charged. Report what is missing."
+  },
+  {
+   "code": "40200",
+   "kind": "internal",
+   "message": "payment required.",
+   "description": "the request cannot be completed until the balance is recharged; check your balance in the account dashboard (https://app.dataforseo.com/api-dashboard)",
+   "class": "payment",
+   "retry": "never",
+   "agent_action": "Stop. Balance must be recharged; tell the user. Never retry."
+  },
+  {
+   "code": "40201",
+   "kind": "internal",
+   "message": "we noticed some unusual activity in your dataforseo account, so we’ve temporarily paused access as a precaution. please, reach out to our support team at support@dataforseo.com for more details, and we’ll work with you to resolve this quickly.",
+   "description": "unusual activity detected in your account may result from the creation of several trial accounts or violation of the DataForSEO Terms of Service in some other way; therefore, your account access and DataForSEO API access have been temporarily paused; contact our support team to resolve the issue",
+   "class": "account",
+   "retry": "never",
+   "agent_action": "Account paused for unusual activity; tell the user to contact DataForSEO support."
+  },
+  {
+   "code": "40202",
+   "kind": "internal",
+   "message": "the rate-limit per minute has been exceeded.",
+   "description": "you can make up to 10000 requests per minute; contact our support team if you need to increase the limit",
+   "class": "rate_limit",
+   "retry": "backoff",
+   "agent_action": "Per-minute rate limit hit; wait about a minute and slow down."
+  },
+  {
+   "code": "40203",
+   "kind": "internal",
+   "message": "the cost limit has been exceeded. you can modify your cost limit in the user panel https://app.dataforseo.com/api-settings.",
+   "description": "you can modify daily cost limits for APIs and endpoints in your account dashboard",
+   "class": "payment",
+   "retry": "never",
+   "agent_action": "Daily cost limit reached (set in api-settings); stop and tell the user. Never retry."
+  },
+  {
+   "code": "40205",
+   "kind": "internal",
+   "message": "the duplicate task limit per hour has been exceeded. you can modify your limits in the user panel https://app.dataforseo.com/api-settings.",
+   "description": "you can modify the duplicate task limit in your account dashboard. Learn more. (https://dataforseo.com/help-center/limit-duplicate-tasks)",
+   "class": "limit",
+   "retry": "never",
+   "agent_action": "Hourly duplicate-task limit reached; reuse earlier results instead of reposting."
+  },
+  {
+   "code": "40206",
+   "kind": "internal",
+   "message": "the duplicate task limit per day has been exceeded. you can modify your limits in the user panel https://app.dataforseo.com/api-settings .",
+   "description": "you can modify the duplicate task limit in your account dashboard. Learn more. (https://dataforseo.com/help-center/limit-duplicate-tasks)",
+   "class": "limit",
+   "retry": "never",
+   "agent_action": "Daily duplicate-task limit reached; reuse earlier results instead of reposting."
+  },
+  {
+   "code": "40207",
+   "kind": "internal",
+   "message": "access denied. your ip is not whitelisted. you can modify your ip whitelist in the user panel https://app.dataforseo.com/api-access .",
+   "description": "you can whitelist all the necessary IPs in the account dashboard. Learn more. (https://dataforseo.com/help-center/whitelist-ips)",
+   "class": "account",
+   "retry": "never",
+   "agent_action": "IP not whitelisted; the user must add it in the API Access settings."
+  },
+  {
+   "code": "40209",
+   "kind": "internal",
+   "message": "too many simultaneous queries.",
+   "description": "the limit for simultaneous requests made by a single user is 30",
+   "class": "rate_limit",
+   "retry": "backoff",
+   "agent_action": "Over 30 simultaneous requests; lower concurrency and retry."
+  },
+  {
+   "code": "40210",
+   "kind": "internal",
+   "message": "insufficient funds. your account's balance is too low to complete this request.",
+   "description": "visit your account dashboard (https://app.dataforseo.com/signin) to add funds; learn more about making payments (https://dataforseo.com/help-center/making-a-payment-changing-details-refunds)",
+   "class": "payment",
+   "retry": "never",
+   "agent_action": "Insufficient funds; stop and tell the user. Never retry."
+  },
+  {
+   "code": "40400",
+   "kind": "internal",
+   "message": "not found.",
+   "description": "the requested resource doesn’t exist; check the URL of the request",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "Resource does not exist; check the URL against the catalog."
+  },
+  {
+   "code": "40401",
+   "kind": "internal",
+   "message": "task not found.",
+   "description": "the requested task does not exist",
+   "class": "task",
+   "retry": "never",
+   "agent_action": "Task id not found; check the id."
+  },
+  {
+   "code": "40402",
+   "kind": "internal",
+   "message": "invalid path.",
+   "description": "the URL path of your request is invalid",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "Invalid path; check it against the catalog."
+  },
+  {
+   "code": "40403",
+   "kind": "internal",
+   "message": "results expired.",
+   "description": "it’s not possible to retrieve the results of a task that was created more than a month ago",
+   "class": "task",
+   "retry": "never",
+   "agent_action": "Results older than about a month expired; a new task is needed (re-estimate and ask)."
+  },
+  {
+   "code": "40404",
+   "kind": "internal",
+   "message": "no prepared data found.please contact our support team.",
+   "description": "the Sandbox does not contain prepared data for the task you set",
+   "class": "sandbox",
+   "retry": "never",
+   "agent_action": "Sandbox has no prepared data for this request; change the request or skip the sandbox check."
+  },
+  {
+   "code": "40405",
+   "kind": "internal",
+   "message": "textual content on the target page is insufficient.",
+   "description": "target page does not have enough textual data, please try specifying a different page",
+   "class": "target",
+   "retry": "never",
+   "agent_action": "Target page has too little text; pick another page."
+  },
+  {
+   "code": "40406",
+   "kind": "internal",
+   "message": "requested page was not submitted for crawling.",
+   "description": "the page was not submitted for crawling in Task POST",
+   "class": "task",
+   "retry": "never",
+   "agent_action": "Page was not part of the crawl; check the OnPage task."
+  },
+  {
+   "code": "40407",
+   "kind": "internal",
+   "message": "duplicate host.",
+   "description": "duplicate hosts detected in request",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "Duplicate hosts in the request; deduplicate targets."
+  },
+  {
+   "code": "40408",
+   "kind": "internal",
+   "message": "target url is invalid.",
+   "description": "website resource at the target URL returned a 404 status code or is invalid",
+   "class": "target",
+   "retry": "never",
+   "agent_action": "Target URL invalid or returns 404; check the URL."
+  },
+  {
+   "code": "40501",
+   "kind": "internal",
+   "message": "invalid field.",
+   "description": "one of the fields in the POST request is invalid",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "Invalid field value; check parameters against the docs page."
+  },
+  {
+   "code": "40502",
+   "kind": "internal",
+   "message": "post data is empty.",
+   "description": "the body of your POST request is empty, please check the body structure and validity",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "POST body empty; send a JSON array of task objects."
+  },
+  {
+   "code": "40503",
+   "kind": "internal",
+   "message": "post data is invalid.",
+   "description": "the structure of the POST request is invalid",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "POST body malformed; it must be a JSON array of task objects."
+  },
+  {
+   "code": "40504",
+   "kind": "internal",
+   "message": "the number of intersecting keywords for the specified domains exceeds 10 million. try specifying different domains.",
+   "description": "there are too many intersecting keywords for the specified domains, please try again with different domain names",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "Too many intersecting keywords (over 10 million); use other domains."
+  },
+  {
+   "code": "40505",
+   "kind": "internal",
+   "message": "you are using old data.",
+   "description": "location parameters you are using are outdated, please check our documentation or call the relevant locations endpoint for up-tp-date parameters",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "Outdated location parameters; refresh from the locations endpoint."
+  },
+  {
+   "code": "40506",
+   "kind": "internal",
+   "message": "unknown fields in post data.",
+   "description": "the body of your POST request contains unknown fields, please consult the documentation of the requested endpoint and use available fields",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "Unknown fields in the body; remove them (see the docs page)."
+  },
+  {
+   "code": "40601",
+   "kind": "internal",
+   "message": "task handed.",
+   "description": "the task has been received but has not yet been enqueued for processing",
+   "class": "pending",
+   "retry": "poll",
+   "agent_action": "Task received, not yet queued; poll tasks_ready later."
+  },
+  {
+   "code": "40602",
+   "kind": "internal",
+   "message": "task in queue.",
+   "description": "the task has been enqueued for processing",
+   "class": "pending",
+   "retry": "poll",
+   "agent_action": "Task in queue; poll tasks_ready later."
+  },
+  {
+   "code": "50000",
+   "kind": "internal",
+   "message": "internal error.",
+   "description": "our system encountered an unexpected condition; please contact our support team",
+   "class": "server",
+   "retry": "later",
+   "agent_action": "Internal error; retry later, then report."
+  },
+  {
+   "code": "50001",
+   "kind": "internal",
+   "message": "error while checking the balance.",
+   "description": "our system failed to check your account balance; please contact our support team",
+   "class": "server",
+   "retry": "later",
+   "agent_action": "Balance check failed; retry later, then report."
+  },
+  {
+   "code": "50100",
+   "kind": "internal",
+   "message": "not implemented.",
+   "description": "you specified a non-existing task or parameter, please check the body of your POST request",
+   "class": "request",
+   "retry": "never",
+   "agent_action": "Non-existent task or parameter; check the body."
+  },
+  {
+   "code": "50301",
+   "kind": "internal",
+   "message": "3rd party api service unavailable.",
+   "description": "one of our external data sources is currently unavailable or responded with an error; the error can be triggered by Google Ads API or other third-party services used by DataForSEO API; message of the error may vary depending on the third-party service status; corresponding message examples: Too many requests Could not connect to host 3rd Party API Service Unavailable",
+   "class": "upstream",
+   "retry": "later",
+   "agent_action": "Third-party source (for example Google Ads) unavailable; retry later."
+  },
+  {
+   "code": "50303",
+   "kind": "internal",
+   "message": "update is in progress. please try after a few minutes",
+   "description": "the API you’re requesting is being updated; this can take a few minutes",
+   "class": "server",
+   "retry": "later",
+   "agent_action": "API is updating; retry after a few minutes."
+  },
+  {
+   "code": "50304",
+   "kind": "internal",
+   "message": "this function is temporarily unavailable. please contact support for more information.",
+   "description": "the function you’re requesting failed to respond; please contact our support team for more information",
+   "class": "server",
+   "retry": "never",
+   "agent_action": "Function temporarily unavailable; report and suggest another endpoint."
+  },
+  {
+   "code": "50401",
+   "kind": "internal",
+   "message": "internal error - timeout.",
+   "description": "our system failed to process a live-mode task in 120 seconds; please try setting a task one more time",
+   "class": "server",
+   "retry": "once",
+   "agent_action": "Live task timed out after 120 seconds; retry once (a retry is billed again: tell the user)."
+  },
+  {
+   "code": "50402",
+   "kind": "internal",
+   "message": "target page took too long to respond.",
+   "description": "target page took longer than 50 seconds to respond, please try again later or specify a different page",
+   "class": "target",
+   "retry": "later",
+   "agent_action": "Target page took over 50 seconds; retry later or use another page."
+  }
+ ]
+}

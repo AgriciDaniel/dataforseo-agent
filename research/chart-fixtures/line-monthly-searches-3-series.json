@@ -1,0 +1,90 @@
+{
+ "case": "line-monthly-searches-3-series",
+ "workflow": "keyword-research",
+ "endpoint": "POST /v3/dataforseo_labs/google/keyword_ideas/live (and other Labs keyword endpoints)",
+ "source": [
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-keyword-ideas.json",
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-top-searches.json"
+ ],
+ "source_cost_usd": [
+  0.0105,
+  0.0105
+ ],
+ "expect": "valid",
+ "notes": "3 series on one axis with different magnitudes; needs a legend.",
+ "spec": {
+  "type": "line",
+  "title": "Monthly searches, 3 keywords",
+  "subtitle": "last 12 months",
+  "x": [
+   "2025-06",
+   "2025-07",
+   "2025-08",
+   "2025-09",
+   "2025-10",
+   "2025-11",
+   "2025-12",
+   "2026-01",
+   "2026-02",
+   "2026-03",
+   "2026-04",
+   "2026-05"
+  ],
+  "series": [
+   {
+    "name": "youtube",
+    "values": [
+     185000000,
+     185000000,
+     226000000,
+     226000000,
+     277000000,
+     226000000,
+     226000000,
+     226000000,
+     226000000,
+     226000000,
+     226000000,
+     226000000
+    ]
+   },
+   {
+    "name": "yout8be",
+    "values": [
+     185000000,
+     185000000,
+     226000000,
+     226000000,
+     277000000,
+     226000000,
+     226000000,
+     226000000,
+     226000000,
+     226000000,
+     226000000,
+     226000000
+    ]
+   },
+   {
+    "name": "google keyword planner",
+    "values": [
+     201000,
+     673000,
+     823000,
+     110000,
+     60500,
+     49500,
+     33100,
+     33100,
+     40500,
+     49500,
+     49500,
+     49500
+    ]
+   }
+  ],
+  "unit": "searches",
+  "sort": "none",
+  "limit": 12
+ }
+}

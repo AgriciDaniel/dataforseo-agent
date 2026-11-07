@@ -1,0 +1,92 @@
+{
+ "case": "hbar-25-keywords-wide-range",
+ "workflow": "keyword-research",
+ "endpoint": "POST /v3/dataforseo_labs/google/keyword_ideas/live (and other Labs keyword endpoints)",
+ "source": [
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/amazon-related-keywords.json",
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-domain-intersection.json",
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-keyword-ideas.json",
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-keyword-suggestions.json",
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-related-keywords.json",
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-top-searches.json",
+  "research/chart-fixtures/sources/sandbox-S1-keyword-ideas.json"
+ ],
+ "source_cost_usd": [
+  0.0105,
+  0.0105,
+  0.0105,
+  0.0105,
+  0.0105,
+  0.0105,
+  0
+ ],
+ "expect": "valid",
+ "notes": "The largest value is many times the smallest: tiny bars must still show at least one cell.",
+ "spec": {
+  "type": "hbar",
+  "title": "Top 25 keywords by search volume",
+  "subtitle": "pooled Labs responses",
+  "x": [
+   "6youtube",
+   "yourb",
+   "youcine",
+   "youtube",
+   "yout8be",
+   "laptop",
+   "gaming laptop",
+   "google keyword planner",
+   "computer",
+   "nothing phone",
+   "macbook",
+   "tin can phone",
+   "seo engine optimization",
+   "search engine positioning seo",
+   "seo",
+   "seo search optimization",
+   "search engine optimizer seo",
+   "seo tools",
+   "chromebook",
+   "bing webmaster tools",
+   "find phone",
+   "serps api",
+   "seo marketing",
+   "web ranking",
+   "website ranking sites"
+  ],
+  "series": [
+   {
+    "name": "search_volume",
+    "values": [
+     226000000,
+     226000000,
+     226000000,
+     226000000,
+     226000000,
+     797929,
+     257349,
+     201000,
+     192759,
+     165000,
+     162652,
+     135000,
+     110000,
+     110000,
+     110000,
+     110000,
+     110000,
+     90500,
+     87740,
+     14800,
+     14800,
+     12100,
+     12100,
+     9900,
+     9900
+    ]
+   }
+  ],
+  "unit": "searches",
+  "sort": "desc",
+  "limit": 25
+ }
+}

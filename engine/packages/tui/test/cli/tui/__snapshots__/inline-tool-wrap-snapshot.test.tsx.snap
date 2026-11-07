@@ -1,0 +1,26 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`TUI inline tool wrapping snapshots consecutive grep, glob, and read rows at a narrow width 1`] = `
+"   ✱ Grep "DATAFORSEO_AGENT.*DB|database|sqlite|drizzle|dev.*db|data.
+     *dir|xdg|APPDATA" in packages/dataforseo-agent/src (151 matches)
+   ✱ Glob "**/*db*" in packages/dataforseo-agent (6 matches)
+   → Read packages/dataforseo-agent/src/storage/db.ts [offset=1,
+     limit=130]
+   → Read packages/dataforseo-agent/src/index.ts [offset=1, limit=100]
+   ✱ Grep "export const
+     DATAFORSEO_AGENT_DB|DATAFORSEO_AGENT_DB|DATAFORSEO_AGENT_DEV|Global
+     \\.Path\\.data|data =" in packages/dataforseo-agent/src (115 matches)"
+`;
+
+exports[`TUI inline tool wrapping snapshots expanded tool errors under the tool text 1`] = `
+"   ✱ Grep "DATAFORSEO_AGENT.*DB|database|sqlite|drizzle|dev.*db|data.
+     *dir|xdg|APPDATA" in packages/dataforseo-agent/src (151 matches)
+   ✱ Glob "**/*db*" in packages/dataforseo-agent (6 matches)
+   → Read packages/dataforseo-agent/src/storage/db.ts [offset=1,
+     limit=130]
+   → Read packages/dataforseo-agent/src/index.ts [offset=1, limit=100]
+     No LSP server available for this file type.
+   ✱ Grep "export const
+     DATAFORSEO_AGENT_DB|DATAFORSEO_AGENT_DB|DATAFORSEO_AGENT_DEV|Global
+     \\.Path\\.data|data =" in packages/dataforseo-agent/src (115 matches)"
+`;

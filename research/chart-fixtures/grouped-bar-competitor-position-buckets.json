@@ -1,0 +1,74 @@
+{
+ "case": "grouped-bar-competitor-position-buckets",
+ "workflow": "competitor-gap-analysis",
+ "endpoint": "POST /v3/dataforseo_labs/google/competitors_domain/live",
+ "source": [
+  "Brain/.raw/sources/dataforseo-research/labs/fixtures/google-competitors-domain.json",
+  "research/chart-fixtures/sources/sandbox-S6-competitors-domain.json"
+ ],
+ "source_cost_usd": [
+  0.0105,
+  0
+ ],
+ "expect": "valid",
+ "notes": "3 series; several sandbox competitors are 0 in every series (zero-height groups).",
+ "spec": {
+  "type": "grouped-bar",
+  "title": "Top-10 footprint by competitor",
+  "subtitle": "organic keywords by position bucket",
+  "x": [
+   "dataforseo.com",
+   "youtube.com",
+   "reddit.com",
+   "quora.com",
+   "google.com",
+   "youtube.com",
+   "trysnow.com",
+   "health.com"
+  ],
+  "series": [
+   {
+    "name": "pos_1",
+    "values": [
+     42,
+     41,
+     35,
+     19,
+     26,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "name": "pos_2_3",
+    "values": [
+     77,
+     76,
+     56,
+     49,
+     56,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "name": "pos_4_10",
+    "values": [
+     487,
+     466,
+     402,
+     334,
+     328,
+     0,
+     0,
+     0
+    ]
+   }
+  ],
+  "unit": "keywords",
+  "sort": "none",
+  "limit": 10
+ }
+}

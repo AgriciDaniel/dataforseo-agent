@@ -1,0 +1,40 @@
+{
+ "case": "share-bar-serp-features-7-parts",
+ "workflow": "serp-snapshot",
+ "endpoint": "POST /v3/serp/google/organic/live/advanced",
+ "source": "Brain/.raw/sources/dataforseo-research/serp/fixtures/google-organic.json",
+ "source_cost_usd": 0.002,
+ "expect": "valid",
+ "notes": "7 parts: one large (organic) and six of size 1 (about 7 percent each); tiny parts need a legend entry even when too narrow to label.",
+ "spec": {
+  "type": "share-bar",
+  "title": "SERP composition",
+  "subtitle": "\"seo tools\" (element count)",
+  "x": [
+   "ai_overview",
+   "organic",
+   "people_also_ask",
+   "people_also_search",
+   "product_considerations",
+   "perspectives",
+   "related_searches"
+  ],
+  "series": [
+   {
+    "name": "elements",
+    "values": [
+     1,
+     8,
+     1,
+     1,
+     1,
+     1,
+     1
+    ]
+   }
+  ],
+  "unit": "elements",
+  "sort": "desc",
+  "limit": 7
+ }
+}
