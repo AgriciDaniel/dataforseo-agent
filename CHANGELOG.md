@@ -2,7 +2,7 @@
 
 All notable changes to DataForSEO Agent. Versions follow `tools/VERSION`.
 
-## Unreleased
+## 0.2.0 (2026-11-13)
 
 ### Added
 - Results pane: on a wide terminal the session's charts stay in view on the right, with previous
