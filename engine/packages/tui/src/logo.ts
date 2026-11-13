@@ -9,11 +9,11 @@ export const MARK = [
   ".YYYKK",
 ]
 /**
- * The sidebar mark: the logo one column narrower than the home mark, 5 by 6 pixels in 3 text rows. The disc is
+ * The sidebar mark: the logo one column narrower than the home mark, 6 by 4 pixels in 2 text rows. The disc is
  * blue above and yellow below, the magnifier's dark ring sits in it with the disc showing through its lens (blue
  * over yellow), and the handle leaves at the bottom right.
  */
-export const MARK_SIDEBAR = [".BBB.", "BKKKB", "BKBKB", "YKYKY", "YKKKY", ".YYKK"]
+export const MARK_SIDEBAR = ["BKKKKB", "BKBBKB", "YKYYKY", "YKKKKK"]
 /** The wordmark row the mark starts on (the wordmark's first row is blank). */
 export const MARK_TOP = 1
 // DataForSEO brand blue and yellow; the ring is near black so it reads on light and dark backgrounds.

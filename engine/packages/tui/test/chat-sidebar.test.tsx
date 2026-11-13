@@ -128,7 +128,7 @@ test("a wide terminal opens the chat sidebar on the left; « folds it and » bri
     const first = setup.renderer.root.findDescendantById("chat-sidebar-chat-ses_kw")!
     const newChat = setup.renderer.root.findDescendantById("chat-sidebar-new")!
     const search = setup.renderer.root.findDescendantById("chat-sidebar-search")!
-    expect(first.y - sidebar.y).toBe(8)
+    expect(first.y - sidebar.y).toBe(7)
     expect(newChat.height).toBe(1)
     expect(first.height).toBe(1)
     expect(setup.renderer.root.findDescendantById("chat-sidebar-state-ses_kw")).toBeUndefined()
@@ -176,9 +176,9 @@ test("sidebar panels leave six chat rows when space allows", () => {
   for (const height of [14, 16, 24, 45]) {
     const layout = sidebarLayout(height)
     expect(layout.chats).toBe(6)
-    expect(layout.panels + layout.chats + 8).toBeLessThanOrEqual(height)
+    expect(layout.panels + layout.chats + 7).toBeLessThanOrEqual(height)
   }
-  expect(sidebarLayout(11)).toEqual({ chats: 3, panels: 0 })
+  expect(sidebarLayout(11)).toEqual({ chats: 4, panels: 0 })
 })
 
 test("a short terminal keeps the chat list usable and scrolls the lower panels", async () => {

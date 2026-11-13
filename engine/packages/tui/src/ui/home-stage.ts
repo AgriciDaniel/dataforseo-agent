@@ -38,7 +38,7 @@ const STAR = "#2c3458"
 const SPARK = ["#ffffff", "#ffd166", "#8fd3ff", GOOD]
 const FIRE = ["#ffd166", WARN, BAD]
 
-// The Homies as in the kit (5 pixels wide, a rounded head, a white shine, two eyes, feet), with the logo's
+// The Homies, slimmed from the kit to 4 pixels wide ( a rounded head, a white shine, two eyes, feet), with the logo's
 // rising bar heights, kept short so they stay small: red 5, yellow 6, green 7 pixels. c body, s shine, e eye, f feet, h blush.
 const HOMIES = [
   { c: "#F44336", s: PAPER, e: INK, f: "#922820", h: "#ff9bb3", rows: 5 },
@@ -47,7 +47,7 @@ const HOMIES = [
 ]
 /** Screen pixels per sprite pixel. */
 const S = 1
-const BW = 5 * S
+const BW = 4 * S
 const GAP = 2
 const FLOOR = 14
 const PW = 46
@@ -156,9 +156,9 @@ const count = (n: number) => Math.round(n).toLocaleString("en-US")
 
 /** A Homie sprite: its body rows under the head, and the walk step. */
 export function homie(bot: number, step: number, happy = false) {
-  const body = Array<string>(HOMIES[bot].rows - 4).fill("ccccc")
-  if (happy) body[0] = "hccch"
-  return [".ccc.", "csccc", "cecec", ...body, step ? ".f.f." : "f...f"]
+  const body = Array<string>(HOMIES[bot].rows - 4).fill("cccc")
+  if (happy) body[0] = "hcch"
+  return [".cc.", "cscc", "cece", ...body, step ? ".ff." : "f..f"]
 }
 
 export class HomeStage {
@@ -529,7 +529,16 @@ export class HomeStage {
         // Breathing in lifts everything above the feet by a pixel; the lowest body row stretches to cover the gap.
         const lifted = breath === 1 && key !== "f" && pose.turn === 0
         const y = y0 + r * S - (lifted ? 1 : 0)
-        const color = key === "e" && pose.eyes === "laser" ? LASER : key === "e" && pose.eyes === "closed" ? pal.c : pal[key as "c"]
+        // Eyes never vanish: shut eyes are a dark line of the body's shade, and laser eyes glow white on the red
+        // Homie, where red would be lost.
+        const color =
+          key === "e" && pose.eyes === "laser"
+            ? i === 0
+              ? PAPER
+              : LASER
+            : key === "e" && pose.eyes === "closed"
+              ? pal.f
+              : pal[key as "c"]
         for (let dy = 0; dy < S + (lifted && r === rows.length - 2 ? 1 : 0); dy++)
           for (let dx = 0; dx < S; dx++) canvas.dot(x0 + c * S + dx, y + dy, color)
       }),

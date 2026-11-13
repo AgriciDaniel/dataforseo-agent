@@ -31,7 +31,7 @@ export function filterChats<T extends { title: string }>(chats: readonly T[], qu
 }
 
 export function sidebarLayout(height: number) {
-  const available = Math.max(0, height - 8)
+  const available = Math.max(0, height - 7)
   return {
     chats: Math.min(6, available),
     panels: Math.max(0, Math.min(22, available - 6, Math.floor(available / 2))),
@@ -138,10 +138,10 @@ export function ChatSidebar(props: { width: number; onClose: () => void }) {
       paddingLeft={1}
       paddingRight={1}
     >
-      {/* Brand header: the DataForSEO mark (5 by 6 pixels, the ring and its lens as in the logo) and the name on
+      {/* Brand header: the DataForSEO mark (6 by 4 pixels, the ring and its lens as in the logo) and the name on
           its middle row in the wordmark's white and gold. Each mark row is one text line, so it never runs into
           the name. */}
-      <box flexDirection="row" flexShrink={0} height={3} gap={2} paddingLeft={1}>
+      <box flexDirection="row" flexShrink={0} height={2} gap={2} paddingLeft={1}>
         <box flexDirection="column" flexShrink={0} width={MARK_SIDEBAR[0].length}>
           <For each={markCells(MARK_SIDEBAR)}>
             {(row) => (
