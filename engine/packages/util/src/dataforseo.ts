@@ -33,7 +33,9 @@ export function readSettings(): Settings {
     // The budget must be above 0: a 0 budget would block nothing billed before the first response.
     budget_per_session_usd: positive(raw.budget_per_session_usd, DEFAULT_SETTINGS.budget_per_session_usd),
     ask_above_usd:
-      typeof raw.ask_above_usd === "number" && raw.ask_above_usd >= 0 ? raw.ask_above_usd : DEFAULT_SETTINGS.ask_above_usd,
+      typeof raw.ask_above_usd === "number" && raw.ask_above_usd >= 0
+        ? raw.ask_above_usd
+        : DEFAULT_SETTINGS.ask_above_usd,
     default_location_code: Number.isInteger(raw.default_location_code)
       ? (raw.default_location_code as number)
       : DEFAULT_SETTINGS.default_location_code,
@@ -75,22 +77,30 @@ export function requestTarget(input: Record<string, unknown>) {
   if (typeof input.url !== "string") return undefined
   try {
     const url = new URL(input.url)
-    return url.protocol === "https:" && url.hostname === "api.dataforseo.com" && url.search === "" ? url.pathname : undefined
+    return url.protocol === "https:" && url.hostname === "api.dataforseo.com" && url.search === ""
+      ? url.pathname
+      : undefined
   } catch {
     return undefined
   }
 }
 
 /** Billed USD for one DataForSEO response: the top-level `cost`, else the sum of `tasks[].cost`. */
-export function billedCost(response: unknown): number {
-  if (!response || typeof response !== "object") return 0
+export function reportedCost(response: unknown): number | undefined {
+  if (!response || typeof response !== "object") return undefined
   const body = response as { cost?: unknown; tasks?: unknown }
   if (typeof body.cost === "number" && Number.isFinite(body.cost)) return Math.max(0, body.cost)
-  if (!Array.isArray(body.tasks)) return 0
+  if (!Array.isArray(body.tasks)) return undefined
+  if (!body.tasks.some((task) => typeof task?.cost === "number" && Number.isFinite(task.cost))) return undefined
   return body.tasks.reduce<number>((sum, task) => {
     const cost = (task as { cost?: unknown } | null)?.cost
     return typeof cost === "number" && Number.isFinite(cost) ? sum + Math.max(0, cost) : sum
   }, 0)
+}
+
+/** Backward compatible total for display; accounting uses reportedCost to distinguish unknown from zero. */
+export function billedCost(response: unknown): number {
+  return reportedCost(response) ?? 0
 }
 
 /** The account from the free /v3/appendix/user_data endpoint: balance, today's spend and the daily limit. */
@@ -112,7 +122,12 @@ export async function fetchAccount(): Promise<Account> {
   const body = (await res.json()) as {
     status_code?: number
     status_message?: string
-    tasks?: { result?: { login?: string; money?: { balance?: number; limits?: { day?: { total?: number } }; statistics?: { day?: { total?: number } } } }[] }[]
+    tasks?: {
+      result?: {
+        login?: string
+        money?: { balance?: number; limits?: { day?: { total?: number } }; statistics?: { day?: { total?: number } } }
+      }[]
+    }[]
   }
   const money = body.tasks?.[0]?.result?.[0]?.money
   if (body.status_code !== 20000 || !money || typeof money.balance !== "number")
@@ -125,7 +140,14 @@ export async function fetchAccount(): Promise<Account> {
   }
 }
 
-export type ListPrice = { unit: string; usd: number; price?: string; per?: string; priority_usd?: number; priority_price?: string }
+export type ListPrice = {
+  unit: string
+  usd: number
+  price?: string
+  per?: string
+  priority_usd?: number
+  priority_price?: string
+}
 
 /** The catalog list price for a canonical `/v3/...` path, from `prices.json` (written by tools/bridge.py). */
 export function listPrice(endpoint: string): ListPrice | undefined {
@@ -165,7 +187,9 @@ function minimumPerTask(entry: ListPrice) {
 export function requestShape(input: Record<string, unknown>) {
   const body = input.data ?? input.params ?? input.body
   const items = Array.isArray(body) ? body : body === undefined ? [] : [body]
-  const priority = items.some((item) => !!item && typeof item === "object" && (item as { priority?: unknown }).priority === 2)
+  const priority = items.some(
+    (item) => !!item && typeof item === "object" && (item as { priority?: unknown }).priority === 2,
+  )
   return { tasks: Array.isArray(body) ? body.length : body === undefined ? 0 : 1, priority }
 }
 
@@ -194,9 +218,14 @@ export function priceLine(endpoint: string, tasks: number, priority = false) {
   const per = entry.per ? entry.per.charAt(0).toLowerCase() + entry.per.slice(1) : entry.unit.replace(/_/g, " ")
   // A flat per-task price gives an exact total; anything else ("$0.0002 + $0.01 advance payment", per row, per
   // result) gives the catalog text and a minimum.
-  const flat = (entry.unit === "per_task" || entry.unit === "per_request") && (!entry.price || entry.price === usd(entry.usd))
-  if (flat) return `List price ${usd(entry.usd)} ${per}${count > 1 ? `, ${usd(entry.usd * count)} for ${count} tasks` : ""}.`
+  const flat =
+    (entry.unit === "per_task" || entry.unit === "per_request") && (!entry.price || entry.price === usd(entry.usd))
+  if (flat)
+    return `List price ${usd(entry.usd)} ${per}${count > 1 ? `, ${usd(entry.usd * count)} for ${count} tasks` : ""}.`
   const perTask = minimumPerTask(entry)
-  const minimum = count > 1 || perTask !== entry.usd ? `, at least ${usd(perTask * count)}${count > 1 ? ` for ${count} tasks` : ""}` : ""
+  const minimum =
+    count > 1 || perTask !== entry.usd
+      ? `, at least ${usd(perTask * count)}${count > 1 ? ` for ${count} tasks` : ""}`
+      : ""
   return `List price ${entry.price ?? usd(entry.usd)} ${per}${minimum}. The bill depends on the results.`
 }

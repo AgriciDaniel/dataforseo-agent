@@ -312,7 +312,7 @@ export const settings: Setting[] = [
     title: "Notifications",
     category: "Alerts",
     path: ["attention", "notifications"],
-    description: "Whether to notify when a session needs attention",
+    description: "Desktop alerts for approvals, questions and finished chats when the terminal is unfocused",
     default: false,
     values: [false, true],
     labels: ["off", "on"],
@@ -322,7 +322,7 @@ export const settings: Setting[] = [
     title: "Sounds",
     category: "Alerts",
     path: ["attention", "sound"],
-    description: "Whether a sound plays when a session needs attention",
+    description: "Play sounds for approvals, questions and finished chats",
     default: false,
     values: [false, true],
     labels: ["off", "on"],
@@ -385,7 +385,8 @@ export function settingID(setting: Setting) {
   return setting.path.join(".")
 }
 
-export function DialogConfig(props: { current?: string }) {
+export function DialogConfig(props: { current?: string; notifications?: boolean }) {
+  const entries = props.notifications ? settings.filter((setting) => setting.path[0] === "attention") : settings
   const config = useConfig()
   const newDesigns = useNewDesigns()
   const dialog = useDialog()
@@ -393,7 +394,7 @@ export function DialogConfig(props: { current?: string }) {
   const themes = useThemes()
   const current = Math.max(
     0,
-    settings.findIndex((setting) => settingID(setting) === props.current),
+    entries.findIndex((setting) => settingID(setting) === props.current),
   )
   const [selected, setSelected] = createSignal(current)
   const [saving, setSaving] = createSignal(false)
@@ -417,7 +418,7 @@ export function DialogConfig(props: { current?: string }) {
     return index === undefined || index < 0 ? String(current) : (setting.labels?.[index] ?? String(current))
   }
   const options = createMemo(() =>
-    settings.map((setting, index) => ({
+    entries.map((setting, index) => ({
       title: setting.title,
       category: setting.category,
       searchText: setting.keywords?.join(" "),
@@ -434,7 +435,7 @@ export function DialogConfig(props: { current?: string }) {
 
   async function change(direction: number, index = selected()) {
     if (saving()) return
-    const setting = settings[index]
+    const setting = entries[index]
     const current = value(setting)
     const choices = values(setting)
     const next = choices
@@ -456,9 +457,9 @@ export function DialogConfig(props: { current?: string }) {
 
   return (
     <DialogSelect
-      title="Settings"
+      title={props.notifications ? "Notifications" : "Settings"}
       searchInTitle
-      titlePlaceholder="Search settings"
+      titlePlaceholder={props.notifications ? "Search notification settings" : "Search settings"}
       options={options()}
       // Under new designs the opening setting is focused without the current-item marker; changing a value keeps the
       // selection where it is.
@@ -468,7 +469,7 @@ export function DialogConfig(props: { current?: string }) {
       filterThreshold={0.7}
       onMove={(option) => setSelected(option.value)}
       onSelect={(option) => {
-        const open = settings[option.value].open
+        const open = entries[option.value].open
         if (newDesigns() && open) return open(dialog)
         void change(1, option.value)
       }}

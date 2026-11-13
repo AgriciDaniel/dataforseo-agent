@@ -5,6 +5,7 @@ import { useClient } from "./client"
 import { useData } from "./data"
 import { useEvent } from "./event"
 import { useStorage } from "./storage"
+import { useToast } from "../ui/toast"
 
 type SessionTerminalsState = {
   sessions: Record<string, string | null>
@@ -16,6 +17,7 @@ export const { use: useSessionTerminals, provider: SessionTerminalsProvider } = 
     const client = useClient()
     const data = useData()
     const event = useEvent()
+    const toast = useToast()
     const [available, setAvailable] = createSignal(false)
     const [focus, setFocus] = createSignal<string>()
     // Input written before a terminal's pane mounts waits here; the pane drains it when it attaches.
@@ -31,17 +33,27 @@ export const { use: useSessionTerminals, provider: SessionTerminalsProvider } = 
     const [terminals, updateTerminals] = storage.memory<Record<string, PersistentPtyInfo[]>>("session-terminals", {
       initial: {},
     })
+    const restoring = new Set(Object.keys(store.sessions).filter((id) => store.sessions[id]))
 
     const refresh = async (sessionID: string) => {
       if (!terminals[sessionID]) updateTerminals((draft) => (draft[sessionID] = []))
       const result = await client.api.experimental.persistentPty.list({ sessionID })
       updateTerminals((draft) => (draft[sessionID] = result))
       const selected = store.sessions[sessionID]
-      if (!selected || result.some((terminal) => terminal.id === selected)) return
+      if (!selected) return
+      if (result.some((terminal) => terminal.id === selected)) {
+        restoring.delete(sessionID)
+        return
+      }
       await update((draft) => {
         if (draft.sessions[sessionID] !== selected) return
         draft.sessions[sessionID] = null
       })
+      if (restoring.delete(sessionID))
+        toast.show({
+          variant: "warning",
+          message: "The previous terminal is no longer available; open a new terminal.",
+        })
     }
 
     // `focus: false` shows the terminal without moving keyboard focus into it, for terminals the user didn't open.
@@ -66,21 +78,29 @@ export const { use: useSessionTerminals, provider: SessionTerminalsProvider } = 
     // The event stream opens with server.connected, so this runs for the first connection and every reconnect.
     onCleanup(
       event.on("server.connected", () => {
+        Object.keys(store.sessions)
+          .filter((id) => store.sessions[id])
+          .forEach((id) => restoring.add(id))
         check = client.api.server
           .info()
           .then((info) => {
             // Servers that predate the field omit it; keep offering terminals as clients did before.
             setAvailable(info.capabilities?.persistentPty !== false)
-            if (!available()) return
-            Object.keys(terminals).forEach((sessionID) => {
-              void refresh(sessionID).catch((error) =>
-                console.error("Failed to refresh persistent terminal panes", error),
+            if (!available()) {
+              if (Object.values(store.sessions).some(Boolean))
+                toast.show({ variant: "warning", message: "This server cannot restore persistent terminals." })
+              return
+            }
+            Array.from(new Set([...Object.keys(terminals), ...Object.keys(store.sessions)])).forEach((sessionID) => {
+              void refresh(sessionID).catch(() =>
+                toast.show({ variant: "warning", message: "Could not restore terminals; reconnect to try again." }),
               )
             })
           })
           .catch((error) => {
             setAvailable(false)
             console.error("Failed to read server terminal support", error)
+            toast.show({ variant: "warning", message: "Could not check terminal support; reconnect to try again." })
           })
           .finally(initial.resolve)
       }),

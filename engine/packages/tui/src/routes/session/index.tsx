@@ -16,6 +16,7 @@ import path from "node:path"
 import { EOL, tmpdir } from "node:os"
 import { mkdir, writeFile } from "node:fs/promises"
 import { useRoute, useRouteData } from "../../context/route"
+import { selectChatPrompt } from "../../context/chat-state"
 import { createStore } from "solid-js/store"
 import { useData } from "../../context/data"
 import { SplitBorder } from "../../ui/border"
@@ -301,6 +302,17 @@ export function Session(props: {
   const [firstJump, setFirstJump] = createSignal<() => void>()
   const [synced, setSynced] = createSignal(false)
   const sessionTabs = useSessionTabs()
+  const activePrompt = createMemo(() =>
+    selectChatPrompt(
+      promptedPermissions(),
+      forms(),
+      sessionTabs.promptTarget()?.sessionID === route.sessionID ? sessionTabs.promptTarget() : undefined,
+    ),
+  )
+  createEffect(() => {
+    const target = sessionTabs.promptTarget()
+    if (target?.sessionID === route.sessionID) setComposer("open", false)
+  })
   const [awayFromBottom, setAwayFromBottom] = createSignal(false)
   const [latestHovered, setLatestHovered] = createSignal(false)
   let ensureAllRowsPending: (() => void)[] | undefined
@@ -1490,20 +1502,20 @@ export function Session(props: {
               />
               <Switch>
                 <Match when={composer.open || (!!session()?.parentID && forms().length === 0)}>{null}</Match>
-                <Match when={promptedPermissions().length > 0}>
-                  <Show when={promptedPermissions()[0]?.id} keyed>
+                <Match when={activePrompt().permission}>
+                  <Show when={activePrompt().permission?.id} keyed>
                     {(_) => {
-                      const request = promptedPermissions()[0]
+                      const request = activePrompt().permission
                       return request ? (
                         <PermissionPrompt request={request} directory={session()?.location.directory} />
                       ) : null
                     }}
                   </Show>
                 </Match>
-                <Match when={forms().length > 0}>
-                  <Show when={forms()[0]?.id} keyed>
+                <Match when={activePrompt().form}>
+                  <Show when={activePrompt().form?.id} keyed>
                     {(_) => {
-                      const form = forms()[0]
+                      const form = activePrompt().form
                       return form ? <FormPrompt form={form} /> : null
                     }}
                   </Show>

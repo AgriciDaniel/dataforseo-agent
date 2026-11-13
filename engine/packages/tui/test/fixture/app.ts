@@ -5,6 +5,7 @@ import { Global } from "@dataforseo-agent/util/global"
 import type { TuiInput } from "../../src/app"
 import type { Config } from "../../src/config"
 import { tmpdir } from "./fixture"
+import { takeDraft } from "../../src/component/prompt/draft-stash"
 import { createEventStream, createFetch, type FetchHandler } from "./tui-client"
 
 export async function createAppFixture(
@@ -17,9 +18,16 @@ export async function createAppFixture(
     fetch?: FetchHandler
     // A renderer whose owner already set up its terminal, such as the simulation renderer.
     setup?: TestRendererSetup
+    managed?: boolean
+    standalone?: boolean
   } = {},
 ) {
+  // Unsent prompt drafts are kept per process: drop the home draft a previous app in this test run left behind.
+  takeDraft(undefined)
   const { run } = await import("../../src/app")
+  const events = createEventStream()
+  const calls = createFetch(input.fetch, events)
+  const server = Bun.serve({ port: 0, fetch: (request) => calls.fetch(request) })
   const root = await tmpdir()
   const setup =
     input.setup ??
@@ -31,15 +39,18 @@ export async function createAppFixture(
   if (!input.setup) await setup.renderer.setupTerminal()
   setup.renderer.start()
   const ready = Promise.withResolvers<void>()
-  const events = createEventStream()
-  const calls = createFetch(input.fetch, events)
   // Updates apply to a copy, as a config file would, so preference writes persist for the rest of the test.
   let config: Config.Info = structuredClone(input.config ?? { animations: false })
-  const server = Bun.serve({ port: 0, fetch: (request) => calls.fetch(request) })
   const task = Effect.runPromise(
     run({
       app: { name: "test", version: "test", channel: "test" },
-      server: { endpoint: { url: server.url.toString() } },
+      server: {
+        endpoint: { url: server.url.toString() },
+        standalone: input.standalone,
+        service: input.managed
+          ? { reconnect: async () => ({ url: server.url.toString() }), restart: async () => {} }
+          : undefined,
+      },
       config: {
         get: async () => config,
         update: async (mutate) => {
@@ -75,6 +86,7 @@ export async function createAppFixture(
     events,
     config: () => config,
     ready: ready.promise,
+    closed: task,
     async [Symbol.asyncDispose]() {
       try {
         if (!setup.renderer.isDestroyed) setup.renderer.destroy()

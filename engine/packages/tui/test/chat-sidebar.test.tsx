@@ -22,6 +22,7 @@ async function open(
   width: number,
   height: number,
   inspect: (setup: Awaited<ReturnType<typeof createTestRenderer>>) => Promise<void>,
+  attention = false,
 ) {
   await using state = await tmpdir()
   const setup = await createTestRenderer({ width, height, kittyKeyboard: true })
@@ -37,7 +38,12 @@ async function open(
   const sessions = [
     { ...base, id: "ses_kw", title: "US SEO keyword research" },
     { ...base, id: "ses_potato", title: "Potato keyword research" },
-    { ...base, id: "ses_hi", title: "Greeting" },
+    {
+      ...base,
+      id: "ses_hi",
+      title: "Greeting",
+      time: { ...base.time, ...(attention ? { idle: Date.now() - 120_000 } : {}) },
+    },
   ]
   await mkdir(`${state.path}/test/tui`, { recursive: true })
   await Bun.write(
@@ -56,8 +62,28 @@ async function open(
           data: [{ type: "user", id: `msg_${s.id}`, text: `Question in ${s.title}`, time: { created: 0 } }],
           cursor: {},
         })
-      if (url.pathname === `/api/session/${s.id}/inbox` || url.pathname === `/api/session/${s.id}/permission`)
-        return json({ data: [] })
+      if (url.pathname === `/api/session/${s.id}/permission`)
+        return json({
+          data:
+            attention && s.id === "ses_kw"
+              ? [{ id: "per_kw", sessionID: s.id, action: "shell", resources: ["echo ready"] }]
+              : [],
+        })
+      if (url.pathname === `/api/session/${s.id}/form`)
+        return json({
+          data:
+            attention && s.id === "ses_potato"
+              ? [
+                  {
+                    id: "frm_potato",
+                    sessionID: s.id,
+                    title: "Choose market",
+                    fields: [{ key: "market", type: "string", title: "Market" }],
+                  },
+                ]
+              : [],
+        })
+      if (url.pathname === `/api/session/${s.id}/inbox`) return json({ data: [] })
     }
   }, createEventStream())
   const server = Bun.serve({ port: 0, idleTimeout: 0, fetch: (request) => calls.fetch(request) })
@@ -104,6 +130,9 @@ test("a wide terminal opens the chat sidebar on the left; « folds it and » bri
     const search = setup.renderer.root.findDescendantById("chat-sidebar-search")!
     expect(first.y - sidebar.y).toBe(8)
     expect(newChat.height).toBe(1)
+    expect(first.height).toBe(1)
+    expect(setup.renderer.root.findDescendantById("chat-sidebar-state-ses_kw")).toBeUndefined()
+    expect(setup.renderer.root.findDescendantById("chat-sidebar-needs-user")).toBeUndefined()
     expect(search.y).toBe(newChat.y + 1)
     expect(frame.split("DataForSEO").length - 1).toBe(1)
     // The chats sit on the left, and the tab strip is gone: each title shows once, in the list.
@@ -161,4 +190,31 @@ test("a short terminal keeps the chat list usable and scrolls the lower panels",
     expect(panels.y + panels.height).toBeLessThanOrEqual(20)
     expect(setup.captureCharFrame()).toContain("Greeting")
   })
+}, 20000)
+
+test("sidebar marks approvals, questions and unseen finishes and its summary jumps to the first waiting chat", async () => {
+  await open(
+    160,
+    45,
+    async (setup) => {
+      await waitForHighlightedFrame(setup, (frame) => frame.includes("2 need you"))
+      for (const [id, marker] of [
+        ["ses_kw", "!"],
+        ["ses_potato", "?"],
+        ["ses_hi", "●"],
+      ]) {
+        const row = setup.renderer.root.findDescendantById(`chat-sidebar-chat-${id}`)!
+        expect(row.height).toBe(1)
+        expect(setup.captureCharFrame().split("\n")[row.y]).toContain(marker)
+      }
+      // Select the second waiting chat, then use the summary to return to the first.
+      const second = setup.renderer.root.findDescendantById("chat-sidebar-chat-ses_potato")!
+      await setup.mockMouse.click(second.x + 2, second.y)
+      await waitForHighlightedFrame(setup, (frame) => frame.includes("Choose market"))
+      const summary = setup.renderer.root.findDescendantById("chat-sidebar-needs-user")!
+      await setup.mockMouse.click(summary.x, summary.y)
+      await waitForHighlightedFrame(setup, (frame) => frame.includes("echo ready"))
+    },
+    true,
+  )
 }, 20000)

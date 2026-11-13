@@ -9,6 +9,7 @@ import { useTheme } from "../context/theme"
 import { useData } from "../context/data"
 import { useRoute } from "../context/route"
 import { useSessionTabs } from "../context/session-tabs"
+import { chatMarkers, chatNeedsUser, chatStateColor } from "../context/chat-state"
 import { Slot } from "../plugin/render"
 import { MARK_SIDEBAR, accent, markCells } from "../logo"
 import { tint } from "../theme/color"
@@ -65,12 +66,13 @@ export function ChatSidebar(props: { width: number; onClose: () => void }) {
       query(),
     ).slice(0, 12),
   )
+  const waiting = createMemo(() => tabs.tabs().filter((tab) => chatNeedsUser(tabs.state(tab.sessionID))))
   const inner = () => Math.max(8, props.width - 4)
   const cut = (text: string, n: number) => ([...text].length > n ? [...text].slice(0, n - 1).join("") + "…" : text)
 
   const Row = (row: { sessionID: string; title: string; earlier?: boolean }) => {
     const active = () => !row.earlier && current() === row.sessionID
-    const status = () => (row.earlier ? undefined : tabs.status(row.sessionID))
+    const state = () => (row.earlier ? "idle" : tabs.state(row.sessionID))
     return (
       <box
         id={`chat-sidebar-chat-${row.sessionID}`}
@@ -96,15 +98,6 @@ export function ChatSidebar(props: { width: number; onClose: () => void }) {
         >
           {" " + cut(row.title, inner() - 4)}
         </text>
-        <Show when={status()?.busy || status()?.attention}>
-          <text
-            fg={status()?.attention ? theme.hue.accent[200] : theme.text.feedback.info.base}
-            flexShrink={0}
-            selectable={false}
-          >
-            {"• "}
-          </text>
-        </Show>
         <Show when={!row.earlier && hovered() === row.sessionID}>
           <text
             id={`chat-sidebar-close-${row.sessionID}`}
@@ -117,6 +110,16 @@ export function ChatSidebar(props: { width: number; onClose: () => void }) {
             }}
           >
             {"× "}
+          </text>
+        </Show>
+        <Show when={state() !== "idle"}>
+          <text
+            id={`chat-sidebar-state-${row.sessionID}`}
+            fg={chatStateColor(state(), theme)}
+            flexShrink={0}
+            selectable={false}
+          >
+            {chatMarkers[state()] + " "}
           </text>
         </Show>
       </box>
@@ -192,7 +195,18 @@ export function ChatSidebar(props: { width: number; onClose: () => void }) {
           onInput={(value: string) => setQuery(value)}
         />
       </box>
-      <box height={1} flexShrink={0} />
+      <box height={1} flexShrink={0} paddingLeft={1}>
+        <Show when={waiting().length > 0}>
+          <text
+            id="chat-sidebar-needs-user"
+            fg={theme.text.muted}
+            selectable={false}
+            onMouseUp={() => tabs.select(waiting()[0].sessionID)}
+          >
+            {waiting().length} need you
+          </text>
+        </Show>
+      </box>
       <scrollbox
         id="chat-sidebar-chats"
         flexGrow={1}

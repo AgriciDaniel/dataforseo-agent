@@ -76,6 +76,7 @@ import { DialogThemeList } from "./component/dialog-theme-list"
 import { DialogHelp } from "./ui/dialog-help"
 import { DialogAgent } from "./component/dialog-agent"
 import { DialogSessionList } from "./component/dialog-session-list"
+import { DialogActivity } from "./component/dialog-activity"
 import { DialogOpen, DialogOpenKey, moveOpenSession } from "./component/dialog-open"
 import { SessionTabs } from "./component/session-tabs"
 import { ChatSidebar, ChatSidebarUnfold } from "./component/chat-sidebar"
@@ -84,6 +85,7 @@ import { createPaneResize } from "./ui/pane-resize"
 import { PaneResizeHandle } from "./ui/pane-resize-handle"
 import { clickedLink } from "./ui/link"
 import { ThemeErrorToast } from "./component/theme-error-toast"
+import { ServiceLifecycle, detachMessage } from "./component/service-lifecycle"
 import { createThemeSource, ThemeProvider, useTheme, useThemes } from "./context/theme"
 import { Home } from "./routes/home"
 import { PromptHistoryProvider } from "./prompt/history"
@@ -188,6 +190,7 @@ export type TuiInput = {
   server: {
     endpoint: Endpoint
     local?: boolean
+    standalone?: boolean
     service?: {
       reconnect: (signal: AbortSignal) => Promise<Endpoint>
       restart: () => Promise<void>
@@ -414,6 +417,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                                           source={createThemeSource(global.config)}
                                                         >
                                                           <ThemeErrorToast />
+                                                          <ServiceLifecycle managed={!!managed} standalone={input.server.standalone} restore={!input.args.sessionID && !input.args.continue && !input.args.prompt && !input.args.newSessionID} />
                                                           <ClientMcp />
                                                           <LocalProvider>
                                                             <PromptStashProvider>
@@ -479,6 +483,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
     const text = epilogue({ session: result.session })
     if (text) process.stdout.write(text + "\n")
   })
+  if (managed) process.stdout.write((yield* Effect.promise(() => detachMessage(api))) + "\n")
 })
 
 function App() {
@@ -810,6 +815,19 @@ function App() {
         run: () => {
           dialog.replace(() => <DialogSessionList />)
         },
+      },
+      {
+        name: "activity.open",
+        title: "Activity",
+        category: "Session",
+        slash: { name: "activity" },
+        run: () => dialog.replace(() => <DialogActivity />),
+      },
+      {
+        name: "notifications.open",
+        title: "Notifications",
+        category: "System",
+        run: () => dialog.replace(() => <DialogConfig notifications />),
       },
       {
         name: "session.new",

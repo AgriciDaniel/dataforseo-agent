@@ -5,6 +5,7 @@ export default defineConfig({
   schema: ["./src/**/*.sql.ts", "./src/**/sql.ts"],
   out: "./migration",
   dbCredentials: {
-    url: "/home/thdxr/.local/share/dataforseo-agent/dataforseo-agent.db",
+    // Only used by drizzle-kit when working on migrations: point it at a local database.
+    url: process.env.DATAFORSEO_AGENT_DB ?? "./dataforseo-agent.db",
   },
 })

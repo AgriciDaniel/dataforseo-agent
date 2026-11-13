@@ -7,6 +7,9 @@ import os from "node:os"
 import path from "node:path"
 import { DATAFORSEO_AGENT_VERSION } from "../src/version"
 import { isolatedEnv } from "./fixture/environment"
+import { binaryPath } from "@opencode/pty"
+import { existsSync } from "node:fs"
+import { DataForSEOAgent } from "@dataforseo-agent/client/promise"
 
 // Real `serve --service` processes driven by the real CLI commands and client. Only behavior that
 // needs real processes lives here; the client's lifecycle decisions are covered by fixture tests in
@@ -15,6 +18,45 @@ import { isolatedEnv } from "./fixture/environment"
 
 const entry = path.join(import.meta.dir, "../src/index.ts")
 const serviceTest = process.platform === "win32" ? test.skip : test
+
+serviceTest.skipIf(!binaryPath || !existsSync(binaryPath))(
+  "CLI restart hands off terminal processes and status reports live activity",
+  async () => {
+    await using home = await serviceHome({ ptyBinary: binaryPath })
+    const endpoint = await ensure(home)
+    const client = DataForSEOAgent.make({ baseUrl: endpoint.url, headers: Service.headers(endpoint) })
+    const terminal = await client.experimental.persistentPty.create({
+      sessionID: "ses_cli_restart",
+      command: "/bin/sh",
+      args: ["-c", "printf retained-output; exec cat"],
+      cwd: home.root,
+      title: "Restart fixture",
+      env: {},
+    })
+    await until(async () => {
+      const snapshot = await client.experimental.persistentPty.snapshot({ ptyID: terminal.id })
+      return snapshot.text.includes("retained-output") ? true : undefined
+    })
+    const before = await settled(home)
+    await cli(home, "service", "restart")
+    const after = await settled(home)
+    expect(after.pid).not.toBe(before.pid)
+    const replacement = DataForSEOAgent.make({ baseUrl: endpoint.url, headers: Service.headers(endpoint) })
+    const restored = await replacement.experimental.persistentPty.snapshot({ ptyID: terminal.id })
+    expect(restored.info.pid).toBe(terminal.pid)
+    expect(restored.text).toContain("retained-output")
+    const status = await cli(home, "service", "status")
+    expect(status.split("\n")[0]).toBe(endpoint.url)
+    expect(status).toContain("Running turns: 0")
+    expect(status).toContain("Pending approvals: 0")
+    expect(status).toContain("Pending questions: 0")
+    expect(status).toContain("Open terminals: 1")
+    expect(status).toMatch(/Uptime: \d+s/)
+    await cli(home, "service", "stop")
+    expect(await cli(home, "service", "status")).toBe("stopped")
+  },
+  120_000,
+)
 
 serviceTest(
   "concurrent CLI and client starts converge on one server",
@@ -175,10 +217,10 @@ serviceTest(
 type Home = Awaited<ReturnType<typeof serviceHome>>
 type Snapshot = Awaited<ReturnType<typeof snapshot>>
 
-async function serviceHome(options: { readonly failBoot?: boolean } = {}) {
+async function serviceHome(options: { readonly failBoot?: boolean; readonly ptyBinary?: string } = {}) {
+  const port = await availablePort()
   // Bun resolves symlinks in the entry path, so process command lines carry the real directory.
   const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "dataforseo-agent-service-lifecycle-")))
-  const port = await availablePort()
   await fs.mkdir(path.join(root, "config"), { recursive: true })
   await fs.writeFile(path.join(root, "config", "service-local.json"), JSON.stringify({ port }))
   // A directory where the database file belongs makes boot fail after the server registers.
@@ -193,7 +235,9 @@ async function serviceHome(options: { readonly failBoot?: boolean } = {}) {
     entry: homeEntry,
     registration: path.join(root, "state", "dataforseo-agent", "service-local.json"),
     env: Object.fromEntries(
-      Object.entries(isolatedEnv(root, overrides)).filter((entry): entry is [string, string] => entry[1] !== undefined),
+      Object.entries(isolatedEnv(root, { ...overrides, DATAFORSEO_AGENT_PTY_BIN: options.ptyBinary })).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined,
+      ),
     ),
     async [Symbol.asyncDispose]() {
       // Only a failed case leaves processes behind: servers, or CLI commands that could still spawn one.

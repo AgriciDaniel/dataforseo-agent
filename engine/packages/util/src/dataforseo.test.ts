@@ -2,7 +2,15 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { billedCost, minimumCost, priceLine, requestPath, requestShape, requestTarget } from "./dataforseo.js"
+import {
+  billedCost,
+  reportedCost,
+  minimumCost,
+  priceLine,
+  requestPath,
+  requestShape,
+  requestTarget,
+} from "./dataforseo.js"
 
 describe("requestPath", () => {
   test("gives one canonical form for the shapes models send", () => {
@@ -33,6 +41,14 @@ describe("billedCost", () => {
     expect(billedCost({ tasks: [{ cost: 0.002, result: [{ cost: 99 }] }, { cost: 0.003 }] })).toBeCloseTo(0.005, 9)
   })
 
+  test("accounting distinguishes missing billing from explicit zero", () => {
+    expect(reportedCost({ cost: 0, tasks: [{ cost: 2 }] })).toBe(0)
+    expect(reportedCost({ tasks: [{ cost: 0 }] })).toBe(0)
+    expect(reportedCost({ tasks: [{}] })).toBeUndefined()
+    expect(reportedCost({})).toBeUndefined()
+    expect(reportedCost({ cost: "0" })).toBeUndefined()
+  })
+
   test("is 0 for anything that is not a response", () => {
     expect(billedCost(undefined)).toBe(0)
     expect(billedCost("cost: 3")).toBe(0)
@@ -45,11 +61,28 @@ describe("priceLine", () => {
   writeFileSync(
     path.join(dir, "prices.json"),
     JSON.stringify({
-      "/v3/serp/google/organic/live/advanced": { unit: "per_serp", usd: 0.002, price: "$0.002", per: "Per SERP 10 results" },
+      "/v3/serp/google/organic/live/advanced": {
+        unit: "per_serp",
+        usd: 0.002,
+        price: "$0.002",
+        per: "Per SERP 10 results",
+      },
       "/v3/backlinks/summary/live": { unit: "per_task", usd: 0.02, price: "$0.02", per: "Per task" },
-      "/v3/ai_optimization/chat_gpt/llm_responses/task_post": { unit: "per_task", usd: 0.0002, price: "$0.0002 + $0.01 advance payment", per: "Per task" },
+      "/v3/ai_optimization/chat_gpt/llm_responses/task_post": {
+        unit: "per_task",
+        usd: 0.0002,
+        price: "$0.0002 + $0.01 advance payment",
+        per: "Per task",
+      },
       "/v3/serp/google/organic/task_get/advanced/{id}": { unit: "free", usd: 0 },
-      "/v3/serp/google/maps/task_post": { unit: "per_serp", usd: 0.0006, price: "$0.0006", per: "Per SERP 100 results", priority_usd: 0.0012, priority_price: "$0.0012" },
+      "/v3/serp/google/maps/task_post": {
+        unit: "per_serp",
+        usd: 0.0006,
+        price: "$0.0006",
+        per: "Per SERP 100 results",
+        priority_usd: 0.0012,
+        priority_price: "$0.0012",
+      },
     }),
   )
   const previous = process.env.DATAFORSEO_AGENT_CONFIG_DIR
@@ -88,7 +121,9 @@ describe("priceLine", () => {
     expect(requestShape({ data: [{ priority: 2 }, { priority: 1 }] })).toEqual({ tasks: 2, priority: true })
   })
   test("placeholder paths match, free endpoints say so, unknown ones say so", () => {
-    expect(priceLine("/v3/serp/google/organic/task_get/advanced/abc-123", 1)).toBe("Free endpoint (catalog list price $0).")
+    expect(priceLine("/v3/serp/google/organic/task_get/advanced/abc-123", 1)).toBe(
+      "Free endpoint (catalog list price $0).",
+    )
     expect(priceLine("/v3/nope/live", 1)).toBe("Price unknown: this endpoint is not in the catalog.")
   })
 })
@@ -99,7 +134,10 @@ describe("requestTarget", () => {
   })
   test("a url wins over path, as on the server, and must be the DataForSEO API", () => {
     expect(
-      requestTarget({ path: "/v3/serp/google/locations", url: "https://api.dataforseo.com/v3/serp/google/organic/live/advanced" }),
+      requestTarget({
+        path: "/v3/serp/google/locations",
+        url: "https://api.dataforseo.com/v3/serp/google/organic/live/advanced",
+      }),
     ).toBe("/v3/serp/google/organic/live/advanced")
     expect(requestTarget({ url: "https://evil.example/v3/serp/google/locations" })).toBeUndefined()
     expect(requestTarget({ url: "http://api.dataforseo.com/v3/appendix/user_data" })).toBeUndefined()

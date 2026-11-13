@@ -113,7 +113,12 @@ export const start = Effect.fn("ServerProcess.start")(function* <E, R>(
     }
     // Schedules fire from any server process (`service`, `dataforseo-agent serve`, or `--standalone`); the table holds all their state.
     yield* Effect.forkIn(Context.get(context, Schedule.Service).run, applicationScope)
-    yield* Ref.set(application, Option.some(Context.get(context, HttpRouter.HttpRouter).asHttpEffect()))
+    yield* Ref.set(
+      application,
+      Option.some(
+        Status.withActivity(Context.get(context, HttpRouter.HttpRouter).asHttpEffect()).pipe(Effect.provideContext(context)),
+      ),
+    )
     yield* status.ready
     return {
       address: bound.http.address,

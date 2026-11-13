@@ -13,23 +13,28 @@ import { Permission } from "../permission.js"
 import { Tool } from "../tool.js"
 import { ToolOutput } from "../tool-output.js"
 import { ReadToolFileSystem } from "./read-filesystem.js"
-import { billedCost, credentials, fetchAccount, listPrice, minimumCost, readSettings, requestPath, requestShape, requestTarget, type Account } from "@dataforseo-agent/util/dataforseo"
+import {
+  reportedCost,
+  credentials,
+  fetchAccount,
+  listPrice,
+  minimumCost,
+  readSettings,
+  requestPath,
+  requestShape,
+  requestTarget,
+  type Account,
+} from "@dataforseo-agent/util/dataforseo"
+import { DataForSEOLedger, paidRequestID, type Budget } from "@dataforseo-agent/util/dataforseo-ledger"
+import { Global } from "@dataforseo-agent/util/global"
 import { SessionStore } from "../session/store.js"
 import type { SessionSchema } from "../session/schema.js"
 import { effectiveName, normalizedName } from "./runtime.js"
 
 const decodeJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))
 
-// DataForSEO Agent: the session budget in settings.json is a hard stop on billed DataForSEO cost, kept per
-// top-level session so subagents (each in its own child session) share their parent's budget.
-// Each paid call adds its billed `cost`, or, when the MCP server's AI format drops it, the catalog list price
-// for its tasks. As a backstop, the drop in account balance since the session's first paid call also counts
-// (it includes anything else billed meanwhile); the larger number wins, so the stop errs toward stopping.
-// If the balance can't be read (user_data is rate limited), the last reading stands. Free endpoints skip all of
-// this, so fetching a result already paid for always works. It lives in memory: a restart starts over.
-const sessionSpend = new Map<string, number>()
-const startBalance = new Map<string, number>()
-const lastDrop = new Map<string, number>()
+// Paid calls reserve against the root chat's durable ledger before dispatch. Balance readings remain a
+// conservative backstop, persisted in the same ledger. Free endpoints never enter accounting.
 let cachedAccount: { at: number; value: Promise<Account | undefined> } | undefined
 
 /** One shared balance reading for up to 10 s, so bursts of calls don't trip the user_data rate limit. */
@@ -39,18 +44,9 @@ function account() {
   return cachedAccount.value
 }
 
-async function balanceSpend(root: string) {
-  if (!credentials()) return lastDrop.get(root) ?? 0
-  const current = await account()
-  if (!current) return lastDrop.get(root) ?? 0
-  const start = startBalance.get(root)
-  if (start === undefined) {
-    startBalance.set(root, current.balance)
-    return 0
-  }
-  const drop = Math.max(0, start - current.balance)
-  lastDrop.set(root, drop)
-  return drop
+async function balance() {
+  if (!credentials()) return undefined
+  return (await account())?.balance
 }
 
 /** The catalog minimum for this request's tasks, used when the response doesn't report its cost. */
@@ -76,6 +72,8 @@ export interface Interface {
    * finish, then bring the registry up to date without waiting for the debounced reload.
    */
   readonly flush: Effect.Effect<void>
+  /** Root chat totals for this session, including a subagent's shared parent budget. */
+  readonly readBudget: (sessionID: SessionSchema.ID) => Effect.Effect<Budget, ToolFailure>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@dataforseo-agent/McpTool") {}
@@ -89,6 +87,15 @@ export const layer = Layer.effect(
     const permission = yield* Permission.Service
     const toolOutput = yield* ToolOutput.Service
     const sessions = yield* SessionStore.Service
+    const global = yield* Global.Service
+    const ledger = new DataForSEOLedger(global.state)
+    yield* ledgerIO(() => ledger.recover()).pipe(
+      Effect.catch(() =>
+        Effect.logWarning(
+          "DataForSEO budget recovery failed. Paid requests will check their session ledger before sending.",
+        ),
+      ),
+    )
     // The top-level session above a subagent's child session. Parents never change, so cache them.
     const roots = new Map<SessionSchema.ID, SessionSchema.ID>()
     const rootSession = Effect.fnUntraced(function* (sessionID: SessionSchema.ID) {
@@ -138,7 +145,9 @@ export const layer = Layer.effect(
                             : `Not sent: "${String(rawPath)}" is not a DataForSEO API path. Use a path like /v3/serp/google/organic/live/advanced, with no query string.`,
                       })
                     // What the prompt shows and the server receives: the checked path, never a `url`.
-                    const sent = endpoint ? { ...Object.fromEntries(Object.entries(args).filter(([key]) => key !== "url")), path: endpoint } : args
+                    const sent = endpoint
+                      ? { ...Object.fromEntries(Object.entries(args).filter(([key]) => key !== "url")), path: endpoint }
+                      : args
                     const resource = endpoint ?? "*"
                     yield* permission.assert({
                       action: name(tool.server, tool.name),
@@ -151,33 +160,35 @@ export const layer = Layer.effect(
                     const free = endpoint !== undefined && listPrice(endpoint)?.unit === "free"
                     const root = dataforseoCall && !free ? yield* rootSession(context.sessionID) : undefined
                     const budget = readSettings().budget_per_session_usd
-                    const spent =
-                      root === undefined
-                        ? 0
-                        : Math.max(sessionSpend.get(root) ?? 0, yield* Effect.promise(() => balanceSpend(root)))
-                    // Refuse a call that would cross the budget by its catalog minimum, not only once it is crossed.
-                    // Calls already in flight when the budget runs out can still finish; nothing new starts.
-                    const next = endpoint ? estimate(endpoint, args) : 0
-                    if (root !== undefined && (spent >= budget || spent + next > budget))
-                      return yield* new ToolFailure({
-                        message: `${spent >= budget ? "Session budget reached" : "Session budget would be exceeded"}: $${money(spent)} spent of $${money(budget)}${next > 0 ? `, and this request costs at least $${money(next)}` : ""}. Not sent. The user can raise budget_per_session_usd with /dfs-settings, or start a new session. The budget is read again on every request, so after a change, try the request again.`,
-                      })
-                    const result = yield* mcp
-                      .callTool({
-                        server: tool.server,
-                        name: tool.name,
-                        // The DataForSEO server needs the full "/v3/..." path, so send the canonical form the permission checked.
-                        // The server prefers `url` over `path`, so `url` never goes through: only the checked path does.
-                        args: sent,
-                        sessionID: context.sessionID,
-                      })
-                      .pipe(
-                        Effect.catchTags({
-                          "MCP.NotFoundError": (error) =>
-                            new ToolFailure({ message: `MCP server "${error.server}" is not available` }),
-                          "MCP.ToolCallError": (error) => new ToolFailure({ message: error.message }),
-                        }),
-                      )
+                    const invoke = mcp.callTool({
+                      server: tool.server,
+                      name: tool.name,
+                      // Only the canonical path checked by the permission prompt reaches the server.
+                      args: sent,
+                      sessionID: context.sessionID,
+                    })
+                    const call: Effect.Effect<Mcp.ToolResult, Mcp.NotFoundError | Mcp.ToolCallError | ToolFailure> =
+                      root !== undefined && endpoint !== undefined
+                        ? paidCall(
+                            ledger,
+                            {
+                              root,
+                              id: paidRequestID(root, context.sessionID, context.id, sent),
+                              endpoint,
+                              tasks: requestShape(sent).tasks,
+                              estimated: estimate(endpoint, sent),
+                              budget,
+                            },
+                            invoke,
+                          )
+                        : invoke
+                    const result = yield* call.pipe(
+                      Effect.catchTags({
+                        "MCP.NotFoundError": (error) =>
+                          new ToolFailure({ message: `MCP server "${error.server}" is not available` }),
+                        "MCP.ToolCallError": (error) => new ToolFailure({ message: error.message }),
+                      }),
+                    )
                     if (result.isError)
                       return yield* new ToolFailure({
                         message:
@@ -188,12 +199,6 @@ export const layer = Layer.effect(
                       })
                     const content = yield* Effect.forEach(result.content, (part) => toContent(part, toolOutput))
                     const text = content.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n")
-                    if (root !== undefined) {
-                      // Add to the current total (not a value read before the call), so parallel calls all count.
-                      const billed = billedCost(result.structured ?? Option.getOrUndefined(decodeJson(text)))
-                      const charge = billed > 0 ? billed : endpoint ? estimate(endpoint, args) : 0
-                      sessionSpend.set(root, (sessionSpend.get(root) ?? 0) + charge)
-                    }
                     const output = () => {
                       if (result.structured !== undefined) return result.structured
                       if (text === "") return null
@@ -243,6 +248,10 @@ export const layer = Layer.effect(
       Effect.forkScoped({ startImmediately: true }),
     )
     return Service.of({
+      readBudget: Effect.fnUntraced(function* (sessionID: SessionSchema.ID) {
+        const root = yield* rootSession(sessionID)
+        return yield* ledgerIO(() => ledger.read(root))
+      }),
       flush: Effect.gen(function* () {
         yield* Fiber.await(initial)
         yield* mcp.awaitStartup()
@@ -254,6 +263,87 @@ export const layer = Layer.effect(
     })
   }),
 )
+
+const storedResult = Schema.Struct({
+  isError: Schema.Boolean,
+  structured: Schema.optional(Schema.Unknown),
+  content: Schema.Array(
+    Schema.Union([
+      Schema.Struct({ type: Schema.Literal("text"), text: Schema.String }),
+      Schema.Struct({
+        type: Schema.Literal("media"),
+        data: Schema.String,
+        mimeType: Schema.String,
+        uri: Schema.optional(Schema.String),
+      }),
+    ]),
+  ),
+})
+const uncertainMessage =
+  "This DataForSEO call may already have been billed. Its outcome is uncertain. Do not repeat it without the user's explicit approval."
+const ledgerIO = <A>(run: () => Promise<A>) =>
+  Effect.tryPromise({
+    try: run,
+    catch: (error) =>
+      new ToolFailure({
+        message:
+          "DataForSEO budget ledger unavailable. No further paid call is allowed until it can be read safely. A dispatched call may already have been billed; do not repeat it without the user's explicit approval.",
+        error,
+      }),
+  })
+
+const paidCall = (
+  ledger: DataForSEOLedger,
+  input: { root: string; id: string; endpoint: string; tasks: number; estimated: number; budget: number },
+  invoke: Effect.Effect<Mcp.ToolResult, Mcp.NotFoundError | Mcp.ToolCallError>,
+) =>
+  Effect.uninterruptibleMask((restore) =>
+    Effect.gen(function* () {
+      const currentBalance = yield* restore(Effect.promise(balance))
+      const reservation = yield* ledgerIO(() =>
+        ledger.reserve({ ...input, session: input.root, balance: currentBalance }),
+      )
+      if (reservation.kind === "replay")
+        return yield* Schema.decodeUnknownEffect(storedResult)(reservation.outcome).pipe(
+          Effect.mapError((error) => new ToolFailure({ message: uncertainMessage, error })),
+        )
+      if (reservation.kind === "uncertain") return yield* new ToolFailure({ message: uncertainMessage })
+      if (reservation.kind === "budget")
+        return yield* new ToolFailure({
+          message: `${reservation.spent >= input.budget ? "Session budget reached" : "Session budget would be exceeded"}: $${money(reservation.spent)} spent of $${money(input.budget)}${input.estimated > 0 ? `, and this request costs at least $${money(input.estimated)}` : ""}. Not sent. The user can raise budget_per_session_usd with /dfs-settings, or start a new session. The budget is read again on every request, so after a change, try the request again.`,
+        })
+      return yield* Effect.gen(function* () {
+        yield* ledgerIO(() => ledger.sent(input.root, input.id))
+        const result = yield* restore(invoke).pipe(
+          Effect.catchTags({
+            // A missing server proves no dispatch occurred. Other transport errors do not prove non-billing.
+            "MCP.NotFoundError": (error) =>
+              ledgerIO(() =>
+                ledger.finish(
+                  input.root,
+                  input.id,
+                  {
+                    isError: true,
+                    content: [{ type: "text", text: `MCP server "${error.server}" is not available` }],
+                  },
+                  0,
+                  true,
+                ),
+              ).pipe(Effect.andThen(Effect.fail(error))),
+            "MCP.ToolCallError": (error) => new ToolFailure({ message: `${error.message} ${uncertainMessage}` }),
+          }),
+        )
+        const text = result.content.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n")
+        const billed = reportedCost(result.structured) ?? reportedCost(Option.getOrUndefined(decodeJson(text)))
+        const outcome =
+          result.isError && billed === undefined
+            ? { ...result, content: [...result.content, { type: "text" as const, text: uncertainMessage }] }
+            : result
+        yield* ledgerIO(() => ledger.finish(input.root, input.id, outcome, billed, result.isError))
+        return outcome
+      }).pipe(Effect.ensuring(Effect.promise(() => ledger.abandon(input.root, input.id))))
+    }),
+  )
 
 // Only media the read tool also accepts is sent inline; other types would fail request lowering on every later turn.
 const toContent = Effect.fnUntraced(function* (part: Mcp.ToolResultContent, toolOutput: ToolOutput.Interface) {
@@ -276,5 +366,5 @@ const toContent = Effect.fnUntraced(function* (part: Mcp.ToolResultContent, tool
 export const node = makeLocationNode({
   service: Service,
   layer,
-  deps: [Tool.node, Mcp.node, Bus.node, Permission.node, ToolOutput.node, SessionStore.node],
+  deps: [Tool.node, Mcp.node, Bus.node, Permission.node, ToolOutput.node, SessionStore.node, Global.node],
 })

@@ -3,7 +3,7 @@ import { decodePersistentPtyMessage, persistentPtyFrame } from "@dataforseo-agen
 import { rgbToOklch, type ResolvedThemeTokens } from "@dataforseo-agent/theme/tui"
 import { extend, useRenderer } from "@opentui/solid"
 import { Option } from "effect"
-import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js"
+import { createEffect, createSignal, onCleanup, Show } from "solid-js"
 import { useClient } from "../context/client"
 import { Keymap } from "../context/keymap"
 import { useSessionTerminals } from "../context/session-terminals"
@@ -50,6 +50,7 @@ export function TerminalPane(props: {
   let restored = false
   let wantsControl = false
   let disposed = false
+  let generation = 0
   let exited = false
   let size: TerminalSize | undefined
   let canonicalSize: TerminalSize | undefined
@@ -166,8 +167,25 @@ export function TerminalPane(props: {
     applyTerminalTheme()
   })
 
-  onMount(() => {
-    void connect().catch((error) => setFailure(errorMessage(error)))
+  createEffect(() => {
+    if (client.connection.status() !== "connected") return
+    const current = ++generation
+    attached = false
+    restored = false
+    controller = false
+    stream.length = 0
+    setFailure(undefined)
+    void connect(current).catch((error) => {
+      if (!disposed && current === generation) setFailure(errorMessage(error))
+    })
+    onCleanup(() => {
+      generation++
+      attached = false
+      restored = false
+      waitingSize?.resolve()
+      socket?.close()
+      socket = undefined
+    })
   })
 
   onCleanup(() => {
@@ -178,13 +196,13 @@ export function TerminalPane(props: {
     props.onFocusRequest?.(undefined)
   })
 
-  async function connect() {
+  async function connect(current: number) {
     const snapshot = await client.api.experimental.persistentPty.snapshot({ ptyID: props.ptyID })
-    if (disposed) return
+    if (disposed || current !== generation) return
     setCanonicalSize(snapshot.info.size)
     await waitForTerminalSize(snapshot.info.size)
-    if (disposed) return
-    terminal?.write(Buffer.from(snapshot.checkpoint, "base64"))
+    if (disposed || current !== generation) return
+    terminal?.write(Buffer.concat([Buffer.from("\x1bc"), Buffer.from(snapshot.checkpoint, "base64")]))
     applyTerminalTheme()
     const next = await client.persistentPty.connect({
       ptyID: props.ptyID,
@@ -192,12 +210,12 @@ export function TerminalPane(props: {
       attachmentID,
       takeover: true,
     })
-    if (disposed) {
+    if (disposed || current !== generation) {
       next.close()
       return
     }
     next.addEventListener("message", (event) => {
-      if (disposed) return
+      if (disposed || current !== generation) return
       if (event.data instanceof ArrayBuffer) {
         enqueue({ type: "output", data: new Uint8Array(event.data) })
         const now = performance.now()
@@ -244,14 +262,14 @@ export function TerminalPane(props: {
       attached = true
     })
     next.addEventListener("error", () => {
-      if (disposed) return
+      if (disposed || current !== generation) return
       const focused = terminal?.focused
       terminal = undefined
       setFailure("Terminal connection failed")
       if (focused) props.onDisconnect?.()
     })
     next.addEventListener("close", () => {
-      if (disposed) return
+      if (disposed || current !== generation) return
       const focused = terminal?.focused
       terminal = undefined
       // The removal event arrives separately; keep the terminal visible until then.

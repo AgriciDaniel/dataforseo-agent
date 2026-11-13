@@ -3,6 +3,7 @@ import { createStore } from "solid-js/store"
 import { useKeyboard, useRenderer } from "@opentui/solid"
 import { isDeepEqual } from "remeda"
 import { createSimpleContext } from "./helper"
+import { chatState, type ChatPromptTarget } from "./chat-state"
 import { useClient } from "./client"
 import { locationKey, useData } from "./data"
 import { withTimestampedFallback } from "@dataforseo-agent/util/session-title-fallback"
@@ -78,6 +79,7 @@ export const { use: useSessionTabs, provider: SessionTabsProvider } = createSimp
       key: "sessionID",
     })
     const fallback = empty()
+    const [promptTarget, setPromptTarget] = createSignal<ChatPromptTarget>()
     const [promptPulses, setPromptPulses] = createSignal<Record<string, number>>({})
     let history: SessionTabHistory = { entries: [], index: -1 }
     // User-closed tabs eligible for reopening; in-memory like history, deleted sessions pruned.
@@ -150,31 +152,50 @@ export const { use: useSessionTabs, provider: SessionTabsProvider } = createSimp
       const sessionID = current()
       return sessionID !== undefined && !state().tabs.some((tab) => tab.sessionID === sessionID)
     }, false)
-    const status = (sessionID: string) => {
-      const session = root(sessionID)
-      const members = family(session)
-      return {
-        // Unread reads the root session only: background subagent completions wake the parent,
-        // whose own idle transition then carries the signal.
-        unread: !isUnread(session)
+    const memberStatus = (sessionID: string) => {
+      const busy =
+        data.session.status(sessionID) === "running" ||
+        data.session.pending.list(sessionID).some((item) => item.type !== "synthetic")
+      const info = data.session.get(sessionID)
+      const status = {
+        unread: !isUnread(sessionID)
           ? undefined
-          : data.session.get(session)?.outcome === "failed"
+          : info?.outcome === "failed"
             ? ("error" as const)
             : ("activity" as const),
+        attention:
+          (data.session.permission.list(sessionID)?.length ?? 0) > 0
+            ? ("permission" as const)
+            : (data.session.form.list(sessionID)?.length ?? 0) > 0
+              ? ("question" as const)
+              : (false as const),
+        busy,
+        // A new execution can start before its refreshed metadata arrives.
+        failed: !busy && info?.outcome === "failed",
+      }
+      return { ...status, state: chatState(status) }
+    }
+    const chatStatus = (sessionID: string) => {
+      const session = root(sessionID)
+      const members = family(session).map(memberStatus)
+      const status = {
+        // Only the root idle watermark represents an unseen family completion.
+        unread: memberStatus(session).unread,
         promptPulse: promptPulses()[session] ?? 0,
-        attention: members.some((id) => (data.session.permission.list(id)?.length ?? 0) > 0)
+        attention: members.some((item) => item.attention === "permission")
           ? ("permission" as const)
-          : members.some((id) => (data.session.form.list(id)?.length ?? 0) > 0)
+          : members.some((item) => item.attention === "question")
             ? ("question" as const)
             : (false as const),
-        // Parked synthetic context (user shells, plan reminders) stays pending without execution; only work counts as busy.
-        busy: members.some(
-          (id) =>
-            data.session.status(id) === "running" ||
-            data.session.pending.list(id).some((item) => item.type !== "synthetic"),
-        ),
+        busy: members.some((item) => item.busy),
+        failed: members.some((item) => item.failed),
         renaming: data.session.title.pending(session),
       }
+      return { ...status, state: chatState(status) }
+    }
+    const status = (sessionID: string) => {
+      const { state, failed, ...status } = chatStatus(sessionID)
+      return status
     }
 
     createProgramStatus({
@@ -312,9 +333,11 @@ export const { use: useSessionTabs, provider: SessionTabsProvider } = createSimp
           if (stale) return
           await Promise.allSettled([
             data.session.message.sync(sessionID),
-            data.session.pending.sync(sessionID),
-            data.session.permission.sync(sessionID),
-            data.session.form.sync(sessionID),
+            ...family(sessionID).flatMap((id) => [
+              data.session.pending.sync(id),
+              data.session.permission.sync(id),
+              data.session.form.sync(id),
+            ]),
           ])
         }
       }, TAB_PREFETCH_DELAY)
@@ -392,6 +415,14 @@ export const { use: useSessionTabs, provider: SessionTabsProvider } = createSimp
       },
       current,
       status,
+      state: (sessionID: string) => chatStatus(sessionID).state,
+      memberStatus,
+      promptTarget,
+      focusPrompt(target: ChatPromptTarget) {
+        const sessionID = root(target.sessionID)
+        setPromptTarget({ ...target, sessionID })
+        route.navigate({ type: "session", sessionID })
+      },
       scrollAnchor(sessionID: string) {
         const target = root(sessionID)
         if (!state().tabs.some((tab) => tab.sessionID === target)) return
