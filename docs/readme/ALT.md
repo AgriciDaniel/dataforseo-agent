@@ -14,7 +14,7 @@ DataForSEO Agent cost guard: each DataForSEO API call stops at a gate with its p
 
 ## maps.svg
 
-DataForSEO Agent charts in the terminal: a local SEO geogrid of 25 rank tiles lights up on map tiles around a pinned business, green for ranks 1 to 3, teal for 4 to 10, gold for 11 to 20, with Top 3: 9 of 25. The view flips to a US tile map of keyword search volume by state and a 12 month trend sparkline. 12 chart types in total.
+DataForSEO Agent charts in the terminal: a local SEO geogrid of 25 rank tiles lights up on map tiles around a pinned business, green for ranks 1 to 3, teal for 4 to 10, gold for 11 to 20, with Top 3: 9 of 25. The view flips to a US tile map of keyword search volume by state and a 12 month trend sparkline. 16 chart types in total.
 
 ## apis.svg
 
@@ -22,4 +22,4 @@ The 12 DataForSEO APIs as a pixel city: the three bots visit SERP, Keywords Data
 
 ## footer.svg
 
-Thanks for playing: a CONTINUE? countdown runs, a price tag says starring the DataForSEO Agent repo is free with no prompt, the three bots hop and a pixel star fills gold. Recap: 576 DataForSEO API endpoints, 12 APIs, 14 agents, 33 SEO skills, 12 chart types, 75+ AI model providers. Continue? Star the repo.
+Thanks for playing: a CONTINUE? countdown runs, a price tag says starring the DataForSEO Agent repo is free with no prompt, the three bots hop and a pixel star fills gold. Recap: 576 DataForSEO API endpoints, 12 APIs, 14 agents, 33 SEO skills, 16 chart types, 75+ AI model providers. Continue? Star the repo.

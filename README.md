@@ -18,7 +18,7 @@ Claude, ChatGPT, Gemini and 75+ AI model providers.
 </p>
 
 <p align="center">
-  <a href="#install">Install</a> · <a href="#how-it-keeps-your-money-safe">Cost guard</a> · <a href="#charts-and-maps">Charts</a> · <a href="#the-12-apis-and-the-team">APIs and team</a> · <a href="#commands">Commands</a> · <a href="#faq">FAQ</a>
+  <a href="#install">Install</a> · <a href="#how-it-keeps-your-money-safe">Cost guard</a> · <a href="#charts-and-maps">Charts</a> · <a href="#the-12-apis-and-the-team">APIs and team</a> · <a href="#commands">Commands</a> · <a href="#faq">FAQ</a> · <a href="#privacy-and-network">Privacy</a>
 </p>
 
 <p align="center">
@@ -33,7 +33,7 @@ Claude, ChatGPT, Gemini and 75+ AI model providers.
 - **Plain-language SEO research:** "Who ranks for best crm in the US?", "Backlink gap between my site and a competitor", "Where does my plumbing business rank across the city?"
 - **Price first, every time:** the agent estimates the cost from the catalog and ends with "Run it for $X?". Then the app itself asks again, showing the list price, before any paid request.
 - **A hard session budget:** $1 by default. Once a session has spent it, no more DataForSEO requests go out.
-- **Charts, not raw JSON:** 12 chart types in the terminal, including a local SEO geogrid on map tiles and a US state map, plus a one-file HTML report.
+- **Charts, not raw JSON:** 16 chart types in the terminal, including a local SEO geogrid on map tiles and a US state map, plus a one-file HTML report.
 - **All of DataForSEO:** 576 active v3 endpoints across 12 APIs, every one live-tested, with a specialist agent per API.
 - **Any AI model:** Claude, ChatGPT, Gemini, OpenRouter and 75+ other providers.
 
@@ -87,6 +87,8 @@ Choosing a model:
 
 Every paid DataForSEO call stops at a prompt that shows the method, path, body, number of tasks and the catalog list price, and waits for your yes. "Always allow" covers that one endpoint only. Free calls run without asking: the sandbox, your balance, task results, location and language lists, and docs lookups. Raw calls to `api.dataforseo.com` from the shell or a web fetch ask too.
 
+Session spend is written to disk, so restarting the app does not refill the budget. Each paid call reserves its estimated cost before it is sent, so chats and child agents running at the same time cannot overshoot together. A call that was sent but whose result was lost in a crash is never sent again on its own: the agent is told it may already have been billed.
+
 The session budget is enforced by the app itself, not just by the agent's instructions. It adds up the billed cost of each call in the session and its sub-agents (or the catalog price when a response leaves the cost out). As a backstop it also watches your account balance, so anything else billed while the session is open counts too. Free calls, such as fetching a result you already paid for, are never blocked. The sidebar shows your balance, today's spend against the daily limit, and this session's spend against the budget.
 
 <details>
@@ -107,15 +109,24 @@ The session budget is enforced by the app itself, not just by the agent's instru
 ## Charts and maps
 
 <p align="center">
-  <img src="docs/readme/maps.svg" width="1200" height="420" alt="DataForSEO Agent charts in the terminal: a local SEO geogrid of 25 rank tiles lights up on map tiles around a pinned business, green for ranks 1 to 3, teal for 4 to 10, gold for 11 to 20, with Top 3: 9 of 25. The view flips to a US tile map of keyword search volume by state and a 12 month trend sparkline. 12 chart types in total." />
+  <img src="docs/readme/maps.svg" width="1200" height="420" alt="DataForSEO Agent charts in the terminal: a local SEO geogrid of 25 rank tiles lights up on map tiles around a pinned business, green for ranks 1 to 3, teal for 4 to 10, gold for 11 to 20, with Top 3: 9 of 25. The view flips to a US tile map of keyword search volume by state and a 12 month trend sparkline. 16 chart types in total." />
 </p>
 
-Numeric results come back as one of 12 chart types: table, kpi, hbar, grouped-bar, share-bar, diverging-bar, line, sparkline, scatter, heatmap, geogrid (a local rank grid drawn on map tiles, with your business pinned) and tilemap (a map of US states). Each chart names the endpoint and the billed cost under it, and each workflow draws the same default charts every time.
+Numeric results come back as one of 16 chart types: table, kpi, hbar, grouped-bar, share-bar, diverging-bar, line, sparkline, scatter, heatmap, distribution (rank buckets per domain), overlap (shared keywords), gauge, donut, geogrid (a local rank grid drawn on map tiles, with your business pinned) and tilemap (a map of US states). Each chart names the endpoint and the billed cost under it, and each workflow draws the same default charts every time.
 
 - Click a column header to sort. Point at a bar, marker or tile to see its exact value.
-- `[table]` switches between chart and table. `[copy CSV]` and `[save CSV]` export the data.
-- `[save report]` writes one HTML file with every chart in the session, in light and dark mode.
-- `[full screen]` opens the chart full screen.
+- Under each chart: `table` switches between chart and table, `copy` and `save` export the data as CSV, `report` writes one HTML file with every chart in the session (light and dark mode), and `expand` opens the chart full screen.
+- On a wide terminal (about 150 columns), charts stay in a results pane on the right while the chat scrolls, with previous and next. `/results` shows or hides it.
+
+## Several chats at once
+
+Each chat in the sidebar carries a marker for its state: waiting for your approval, asked you a question, failed, working, or finished since you last looked. A line above the list says how many need you and jumps to the first one. `/activity` lists every chat and child agent by state, with search.
+
+You can close the terminal while work is running. With the background service, chats keep going and a pending approval stays pending; starting `dataforseo` again reopens the last chat, shows the approval or question again and reconnects open terminals. `/detach` does the same on purpose and tells you how many chats are still running. Started with `--standalone`, the app stops its work when it closes, and says so.
+
+Notifications and sounds for approvals, questions and finished chats are off by default; turn them on under Notifications in the command palette.
+
+The chat sidebar on the left lists your chats and shows the account: balance, today's spend, and this session's spend against its budget. The balance and session spend also sit in the prompt footer, so they stay in view with the sidebar folded. The home screen has starter prompts for common jobs; clicking one fills the prompt and waits for you to send it.
 
 ## The 12 APIs and the team
 
@@ -155,6 +166,7 @@ Behind them sits the DataForSEO Brain: source-cited notes and 33 workflow skills
 | `dataforseo-agent-setup` | Connect the account, set budget and market, sign in to a model. |
 | `dataforseo-agent --check-account` | Check the login, balance and today's spend (free). |
 | `dataforseo-agent-update` | Pull the latest version, rebuild and reinstall. |
+| `dataforseo-agent service status` | What is alive in the background: running turns, pending approvals and questions, open terminals, uptime. |
 
 Inside the app:
 
@@ -166,6 +178,9 @@ Inside the app:
 | `/dfs-endpoint` | One endpoint explained: parameters, modes, limits, price, an example request. |
 | `/dfs-news` | What changed at DataForSEO lately (free). |
 | `/dfs-settings` | Show or change the budget, default market and mode. |
+| `/results` | Show or hide the results pane with the session's charts. |
+| `/activity` | Every chat and child agent by state: waiting for approval, asked a question, failed, working, finished. Enter jumps to it. |
+| `/detach` | Leave the app while chats keep running. Start `dataforseo` again to come back. |
 
 ## FAQ
 
@@ -221,6 +236,16 @@ The catalog is built from DataForSEO's official OpenAPI spec and pricing pages, 
 
 </details>
 
+## Privacy and network
+
+The app talks to three kinds of servers, and only these:
+
+- **DataForSEO**, with your API login, for the calls you approve and for the free account and catalog checks.
+- **Your AI model provider**, with your chat, as with any AI tool. Which one is your choice at setup.
+- **models.dev**, to refresh the public list of models and prices. Nothing about you or your chats is sent.
+
+There is no telemetry and no automatic update. Usage data is exported only if you set the standard `OTEL_EXPORTER_OTLP_ENDPOINT` variable yourself. Your DataForSEO password is stored in `~/.config/dataforseo-agent/credentials.env`, readable only by you, and never goes through a model.
+
 ## License
 
 MIT, see [LICENSE](LICENSE).
@@ -230,7 +255,7 @@ DataForSEO is a trademark of its owner. This is an independent project that uses
 Built by **[Agrici Daniel](https://agricidaniel.com/about)**, AI Workflow Architect, with help from the [AI Marketing Hub Pro](https://www.skool.com/ai-marketing-hub-pro) community. The three bots are from my GitHub profile.
 
 <p align="center">
-  <img src="docs/readme/footer.svg" width="1200" height="420" alt="Thanks for playing: a CONTINUE? countdown runs, a price tag says starring the DataForSEO Agent repo is free with no prompt, the three bots hop and a pixel star fills gold. Recap: 576 DataForSEO API endpoints, 12 APIs, 14 agents, 33 SEO skills, 12 chart types, 75+ AI model providers. Continue? Star the repo." />
+  <img src="docs/readme/footer.svg" width="1200" height="420" alt="Thanks for playing: a CONTINUE? countdown runs, a price tag says starring the DataForSEO Agent repo is free with no prompt, the three bots hop and a pixel star fills gold. Recap: 576 DataForSEO API endpoints, 12 APIs, 14 agents, 33 SEO skills, 16 chart types, 75+ AI model providers. Continue? Star the repo." />
 </p>
 
 <p align="center">
