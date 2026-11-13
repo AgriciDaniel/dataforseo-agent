@@ -2,6 +2,12 @@
 
 All notable changes to DataForSEO Agent. Versions follow `tools/VERSION`.
 
+## Unreleased
+
+### Changed
+- Sidebar mark drawn in sextants (two text rows); Homies use the kit sprite at kit-like heights.
+- README: a "See it running" section with real screenshots.
+
 ## 0.2.0 (2026-11-13)
 
 ### Added

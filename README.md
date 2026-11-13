@@ -18,7 +18,7 @@ Claude, ChatGPT, Gemini and 75+ AI model providers.
 </p>
 
 <p align="center">
-  <a href="#install">Install</a> · <a href="#how-it-keeps-your-money-safe">Cost guard</a> · <a href="#charts-and-maps">Charts</a> · <a href="#the-12-apis-and-the-team">APIs and team</a> · <a href="#commands">Commands</a> · <a href="#faq">FAQ</a> · <a href="#privacy-and-network">Privacy</a>
+  <a href="#see-it-running">Screenshots</a> · <a href="#install">Install</a> · <a href="#how-it-keeps-your-money-safe">Cost guard</a> · <a href="#charts-and-maps">Charts</a> · <a href="#the-12-apis-and-the-team">APIs and team</a> · <a href="#commands">Commands</a> · <a href="#faq">FAQ</a> · <a href="#privacy-and-network">Privacy</a>
 </p>
 
 <p align="center">
@@ -36,6 +36,45 @@ Claude, ChatGPT, Gemini and 75+ AI model providers.
 - **Charts, not raw JSON:** 16 chart types in the terminal, including a local SEO geogrid on map tiles and a US state map, plus a one-file HTML report.
 - **All of DataForSEO:** 576 active v3 endpoints across 12 APIs, every one live-tested, with a specialist agent per API.
 - **Any AI model:** Claude, ChatGPT, Gemini, OpenRouter and 75+ other providers.
+
+## See it running
+
+Real screenshots from one sitting, about 10 cents of DataForSEO credit in total.
+
+<p align="center">
+  <img src="docs/screenshots/home.png" width="1100" alt="DataForSEO Agent home screen in the terminal: chat sidebar on the left, the prompt with four starter questions, and the three Homies walking past a keyword ideas station" />
+</p>
+
+**It asks before it spends.** The plan, the estimate, then a prompt with the list price and the exact endpoint. Nothing is sent until you accept.
+
+<p align="center">
+  <img src="docs/screenshots/approval.png" width="1100" alt="Approval prompt for a paid DataForSEO call: from $0.012, POST dataforseo_labs google keyword_ideas live, with Accept, Allow all in chat, Always this endpoint and Deny" />
+</p>
+
+**Keyword ideas** (Labs API, $0.024). "Find keyword ideas for crm software in the United States with search volume and difficulty." The answer stays in the chat and the table stays in the results pane on the right.
+
+<p align="center">
+  <img src="docs/screenshots/keywords.png" width="1100" alt="Keyword ideas for crm software in the US: the agent's notes in the chat and a sortable table of keywords with search volume, difficulty and CPC in the results pane" />
+</p>
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/serp.png" alt="Top 10 Google results for best crm software in the US, as a table of rank, domain, type and title, with the agent's findings" /></td>
+    <td width="50%"><img src="docs/screenshots/trend.png" alt="Line chart of monthly US search volume for crm software, project management software and email marketing software over 12 months" /></td>
+  </tr>
+  <tr>
+    <td><b>Google rankings</b> (SERP API, $0.002). "Top 10 Google results for best crm software in the US."</td>
+    <td><b>Search volume over time</b> (Keywords Data API, $0.06). Three keywords compared across 12 months.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/maps.png" alt="Google Maps results for coffee shop in Austin, Texas: a scatter chart of rating against review count for 20 places, with the agent's notes" /></td>
+    <td><img src="docs/screenshots/intent.png" alt="Search intent mix of 100 keyword ideas as a share bar: 44 percent commercial, 40 informational, 12 navigational, 4 transactional" /></td>
+  </tr>
+  <tr>
+    <td><b>Local results</b> (Google Maps, $0.002). "Who shows up on Google Maps for coffee shop in Austin, Texas?"</td>
+    <td><b>Search intent mix</b>, drawn from the same keyword ideas call at no extra cost.</td>
+  </tr>
+</table>
 
 ## Install
 
