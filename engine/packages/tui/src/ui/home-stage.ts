@@ -2,7 +2,9 @@
 // walk a road past six DataForSEO stations and work each one:
 // keyword ideas grow into volume bars, the site climbs a result page, On-Page problems get fixed, backlinks
 // connect, a local rank grid turns green and an AI answer cites the site. One Homie fires its red laser at the
-// station while the others watch; every finished station moves the rank up, and #1 sets off fireworks.
+// station while one of the others dozes off and the third fidgets; every finished station moves the rank up and
+// the crew dances, and #1 sets off fireworks. On the road between stations something always happens: a run of
+// click coins to grab, a 404 ghost to zap, the slow LCP snail to hop, or a round of backflips.
 //
 // Interaction: click a Homie for a backflip and a tip, click a station to speed its work up, click anywhere else
 // and the crew jumps. Stateful: the component steps it about 30 times a second. The short strip (ui/home-crew.ts)
@@ -37,11 +39,11 @@ const SPARK = ["#ffffff", "#ffd166", "#8fd3ff", GOOD]
 const FIRE = ["#ffd166", WARN, BAD]
 
 // The Homies as in the kit (5 pixels wide, a rounded head, a white shine, two eyes, feet), with the logo's
-// rising bar heights as in the kit: red 8, yellow 10, green 13 pixels. c body, s shine, e eye, f feet, h blush.
+// rising bar heights, kept short so they stay small: red 5, yellow 6, green 7 pixels. c body, s shine, e eye, f feet, h blush.
 const HOMIES = [
-  { c: "#F44336", s: PAPER, e: INK, f: "#922820", h: "#ff9bb3", rows: 8 },
-  { c: "#FFC107", s: PAPER, e: INK, f: "#997404", h: "#ff9bb3", rows: 10 },
-  { c: "#7ED957", s: PAPER, e: INK, f: "#4C8234", h: "#ff9bb3", rows: 13 },
+  { c: "#F44336", s: PAPER, e: INK, f: "#922820", h: "#ff9bb3", rows: 5 },
+  { c: "#FFC107", s: PAPER, e: INK, f: "#997404", h: "#ff9bb3", rows: 6 },
+  { c: "#7ED957", s: PAPER, e: INK, f: "#4C8234", h: "#ff9bb3", rows: 7 },
 ]
 /** Screen pixels per sprite pixel. */
 const S = 1
@@ -51,7 +53,7 @@ const FLOOR = 14
 const PW = 46
 const PANEL_TOP = 2
 /** The sprite row the eyes are on. */
-const EYES = 3
+const EYES = 2
 const GRAVITY = 90
 
 type Kind = "keywords" | "serp" | "onpage" | "backlinks" | "maps" | "ai"
@@ -127,6 +129,13 @@ const WORK = 4.6
 const CHEER = 1.7
 const PARTY = 3.6
 
+// What the crew meets on the road. g ghost, k ink, s shell, b body, e slime.
+const GHOST = [".ggg.", "ggggg", "gkgkg", "ggggg", "g.g.g"]
+const SNAIL = [".sss..", "ssbss.", "sbsbs.", "eeeeee"]
+const SPRITES = { ghost: { g: "#c9d1e0", k: INK }, snail: { s: "#e0a040", b: "#8a5a1a", e: "#9bd17a" } }
+const GAGS = ["coins", "ghost", "flips", "snail"] as const
+type Thing = { kind: "coin" | "ghost" | "snail"; x: number; y: number; done?: number }
+
 type Bot = { y: number; vy: number; flip?: number; say?: string; sayUntil: number; happyUntil: number }
 type Particle = { x: number; y: number; vx: number; vy: number; life: number; color: string }
 type Float = { x: number; y: number; text: string; fg: string; from: number; until: number }
@@ -147,9 +156,9 @@ const count = (n: number) => Math.round(n).toLocaleString("en-US")
 
 /** A Homie sprite: its body rows under the head, and the walk step. */
 export function homie(bot: number, step: number, happy = false) {
-  const body = Array<string>(HOMIES[bot].rows - 5).fill("ccccc")
+  const body = Array<string>(HOMIES[bot].rows - 4).fill("ccccc")
   if (happy) body[0] = "hccch"
-  return [".ccc.", "csccc", "ccccc", "cecec", ...body, step ? ".f.f." : "f...f"]
+  return [".ccc.", "csccc", "cecec", ...body, step ? ".f.f." : "f...f"]
 }
 
 export class HomeStage {
@@ -171,6 +180,11 @@ export class HomeStage {
   private pointer?: number
   private pointedAt = 0
   private hopped = new Map<number, number>()
+  private things: Thing[] = []
+  private gag = 0
+  private walked = 0
+  private zap?: { until: number; thing: Thing }
+  private emoted = 0
 
   constructor(
     private width: number,
@@ -178,6 +192,7 @@ export class HomeStage {
   ) {
     this.next = random(seed)
     this.tip = Math.floor(this.next() * TIPS.length)
+    this.startWalk()
   }
 
   resize(width: number) {
@@ -216,17 +231,20 @@ export class HomeStage {
     if (this.phase === "walk") {
       const target = 50 + this.station * SPACING
       this.scroll = Math.min(target, this.scroll + SPEED * dt)
+      this.stepRoad()
       if (this.scroll >= target) {
         this.phase = "work"
         this.since = this.time
         this.boost = 0
       }
     } else if (this.phase === "work") {
+      this.stepWaiting()
       if (this.progress() >= 1) this.finish()
     } else if (this.time - this.since > (this.rank === 1 ? PARTY : CHEER)) {
       if (this.rank === 1) this.rank = START_RANK
       this.station++
       this.phase = "walk"
+      this.startWalk()
     }
     // Fireworks while the site holds #1.
     if (this.phase === "cheer" && this.rank === 1 && Math.floor(this.time / 0.3) !== Math.floor((this.time - dt) / 0.3))
@@ -249,6 +267,88 @@ export class HomeStage {
       return p.life > 0 && p.y < FLOOR
     })
     this.floats = this.floats.filter((f) => f.until > this.time)
+    this.things = this.things.filter((t) => t.x - this.scroll > -10 && (t.done === undefined || this.time - t.done < 0.6))
+    if (this.zap && this.zap.until <= this.time) {
+      this.fix(this.zap.thing)
+      this.zap = undefined
+    }
+  }
+
+  /** A walk begins: the next gag is laid out on the road ahead, before the station comes into reach. */
+  private startWalk() {
+    this.walked = this.time
+    const ahead = this.scroll + this.botX(2) + BW
+    const kind = GAGS[this.gag++ % GAGS.length]
+    if (kind === "coins") for (let i = 0; i < 6; i++) this.things.push({ kind: "coin", x: ahead + 22 + i * 5, y: FLOOR - 4 - [0, 2, 4, 4, 2, 0][i] })
+    if (kind === "ghost") this.things.push({ kind: "ghost", x: ahead + 46, y: FLOOR - 9 })
+    if (kind === "snail") this.things.push({ kind: "snail", x: ahead + 40, y: FLOOR })
+  }
+
+  /** On the road: grab coins, zap the 404 ghost, hop the snail, or backflip one after another. */
+  private stepRoad() {
+    const kind = GAGS[(this.gag - 1) % GAGS.length]
+    if (kind === "flips")
+      this.bots.forEach((bot, i) => {
+        const at = this.walked + 0.9 + i * 0.55
+        if (bot.vy === 0 && bot.flip === undefined && this.time >= at && this.time - at < 0.1) {
+          bot.vy = -22
+          bot.flip = this.time
+          this.emote(i, "♪", SPARK[i + 1], 0.9)
+        }
+      })
+    for (const thing of this.things) {
+      if (thing.done !== undefined) continue
+      const sx = thing.x - this.scroll
+      if (thing.kind === "coin") {
+        // Every Homie jumps for the high coins; the leader pockets them.
+        this.bots.forEach((bot, i) => {
+          if (bot.vy === 0 && thing.y < FLOOR - 6 && sx - this.botX(i) > 2 && sx - this.botX(i) < 5) bot.vy = -17
+        })
+        if (sx <= this.botX(2) + BW - 1) this.fix(thing)
+      }
+      if (thing.kind === "ghost" && !this.zap && sx - (this.botX(2) + BW) < 16) this.zap = { until: this.time + 0.4, thing }
+      if (thing.kind === "snail") {
+        thing.x -= 0.04
+        this.bots.forEach((bot, i) => {
+          const gap = sx - (this.botX(i) + BW)
+          if (bot.vy === 0 && gap > 0 && gap < 3) bot.vy = -19
+        })
+        // Red, at the back, lands on it.
+        if (sx < this.botX(0) + 2) this.fix(thing)
+      }
+    }
+  }
+
+  /** While one Homie works the station, the next one dozes off and the third cannot stand still. */
+  private stepWaiting() {
+    const sleeper = (this.worker() + 1) % 3
+    const fidget = (this.worker() + 2) % 3
+    if (this.time - this.emoted > 1.1) {
+      this.emoted = this.time
+      this.emote(sleeper, "z", MUTED, 1)
+      if (this.bots[fidget].vy === 0) this.bots[fidget].vy = -11
+    }
+  }
+
+  /** A thing on the road is dealt with: clicks for a coin, a fix for the ghost and the snail. */
+  private fix(thing: Thing) {
+    if (thing.done !== undefined) return
+    thing.done = this.time
+    const sx = thing.x - this.scroll
+    if (thing.kind === "coin") {
+      this.clicks += 20
+      this.burst(sx + 1, thing.y + 1, 3, [GOLD, PAPER], 4)
+      return
+    }
+    const text = thing.kind === "ghost" ? "404 fixed" : "LCP 2.1s ✓"
+    this.float(sx - 2, thing.y - 8, text, GOOD, 1.4)
+    this.burst(sx + 2, thing.y - (thing.kind === "ghost" ? -2 : 2), 12, thing.kind === "ghost" ? ["#c9d1e0", PAPER, RESULT] : ["#e0a040", PAPER], 8)
+    this.clicks += 40
+  }
+
+  /** A little sign over a Homie's head: a note, a snore, a heart. */
+  private emote(i: number, text: string, fg: string, seconds: number) {
+    this.float(this.botX(i) + 2, FLOOR - HOMIES[i].rows * S - 3, text, fg, seconds)
   }
 
   /** The station is done: the rank moves up, clicks come in, the crew cheers and one of them says what happened. */
@@ -266,6 +366,8 @@ export class HomeStage {
       bot.happyUntil = this.time + CHEER
       if (this.rank === 1) bot.flip = this.time
     })
+    this.emote((this.worker() + 1) % 3, "!", GOLD, 0.8)
+    this.emote(this.worker(), "♥", BAD, 1.2)
     const talker = this.bots[(this.station + 1) % 3]
     talker.say = this.rank === 1 ? "#1 on Google!" : station.say
     talker.sayUntil = this.time + (this.rank === 1 ? PARTY : CHEER) - 0.1
@@ -338,12 +440,17 @@ export class HomeStage {
   poses() {
     return this.bots.map((bot, i) => {
       const blink = (this.time + i * 1.3) % 3.7 < 0.15
-      const laser = this.phase === "work" && i === this.worker() && bot.vy === 0 && (this.time - this.since) % 0.9 < 0.55
+      const laser =
+        (this.phase === "work" && i === this.worker() && bot.vy === 0 && (this.time - this.since) % 0.9 < 0.55) ||
+        (this.zap !== undefined && i === 2)
+      const asleep = this.phase === "work" && i === (this.worker() + 1) % 3
+      // The crew dances after a station: a step to the side on the beat.
+      const sway = this.phase === "cheer" ? (Math.floor(this.time * 5) + i) % 2 : 0
       return {
-        x: this.botX(i),
+        x: this.botX(i) + sway,
         lift: Math.round(-bot.y),
         turn: bot.flip !== undefined ? -Math.min(4, Math.floor(((this.time - bot.flip) / 0.6) * 4)) : 0,
-        eyes: laser ? ("laser" as const) : blink ? ("closed" as const) : ("ahead" as const),
+        eyes: laser ? ("laser" as const) : blink || asleep ? ("closed" as const) : ("ahead" as const),
         happy: bot.happyUntil > this.time,
         step: this.phase === "walk" && bot.vy === 0 ? Math.floor((this.scroll + i * 2) / 3) % 2 : 0,
       }
@@ -359,6 +466,7 @@ export class HomeStage {
       this.drawStation(canvas, STATIONS[k % STATIONS.length], x, k < this.station ? 1 : k > this.station ? 0 : this.progress(), k)
     }
     this.drawRoad(canvas)
+    this.drawThings(canvas)
     const poses = this.poses()
     // The Homies walk in front of a station: its text gives way where one of them stands.
     const hidden = canvas.labels.filter((label) =>
@@ -428,14 +536,45 @@ export class HomeStage {
     )
   }
 
+  private drawThings(canvas: PixelCanvas) {
+    for (const thing of this.things) {
+      const x = Math.round(thing.x - this.scroll)
+      if (x < -8 || x > this.width + 2) continue
+      if (thing.kind === "coin" && thing.done === undefined) {
+        // A spinning coin: full, then edge on.
+        const thin = Math.floor(this.time * 4 + thing.x) % 4 === 0
+        canvas.dot(x, thing.y, GOLD)
+        canvas.dot(x, thing.y + 1, "#b8860b")
+        if (!thin) {
+          canvas.dot(x + 1, thing.y, PAPER)
+          canvas.dot(x + 1, thing.y + 1, GOLD)
+        }
+      }
+      if (thing.kind === "ghost" && thing.done === undefined) {
+        const y = thing.y - 5 + Math.round(Math.sin(this.time * 4))
+        canvas.sprite(GHOST, SPRITES.ghost, x, y)
+        canvas.label(x + 1, Math.max(1, Math.floor(y / 2) - 1), "404", BAD, "")
+      }
+      if (thing.kind === "snail") {
+        if (thing.done === undefined) {
+          canvas.sprite(SNAIL, SPRITES.snail, x, thing.y - SNAIL.length)
+          canvas.label(x - 1, Math.floor((thing.y - 7) / 2), "LCP 4.8s", "#e0a040", "")
+        } else for (let k = 0; k < 6; k++) canvas.dot(x + k, thing.y - 1, "#e0a040")
+      }
+    }
+  }
+
   /** The working Homie's red laser, from its eyes to the station. */
   private drawLaser(canvas: PixelCanvas, poses: ReturnType<HomeStage["poses"]>) {
+    const beam = (i: number, to: number, y: number) => {
+      for (let x = poses[i].x + BW; x < to; x++) if ((x + Math.floor(this.time * 40)) % 5 !== 0) canvas.dot(x, y, LASER)
+      if (Math.floor(this.time * 30) % 3 === 0) this.burst(to, y, 1, FIRE, 5)
+    }
+    // On the road the leader zaps the 404 ghost.
+    if (this.zap) beam(2, Math.round(this.zap.thing.x - this.scroll), FLOOR - HOMIES[2].rows * S + EYES * S)
     const i = this.worker()
-    if (poses[i].eyes !== "laser") return
-    const y = FLOOR - HOMIES[i].rows * S + EYES * S
-    const to = this.stationX(this.station)
-    for (let x = poses[i].x + BW; x < to; x++) if ((x + Math.floor(this.time * 40)) % 5 !== 0) canvas.dot(x, y, LASER)
-    if (Math.floor(this.time * 30) % 3 === 0) this.burst(to, y, 1, FIRE, 5)
+    if (this.phase !== "work" || poses[i].eyes !== "laser") return
+    beam(i, this.stationX(this.station), FLOOR - HOMIES[i].rows * S + EYES * S)
   }
 
   private drawStation(canvas: PixelCanvas, station: Station, x: number, p: number, k: number) {
