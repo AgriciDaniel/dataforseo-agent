@@ -7,7 +7,7 @@ Claude, ChatGPT, Gemini and 75+ AI model providers.
 -->
 
 <p align="center">
-  <img src="docs/readme/hero.svg" width="1200" height="420" alt="DataForSEO Agent hero animation: three pixel bots walk into a terminal where someone types Top 10 Google results for best crm in the US. The agent routes the question to the DataForSEO SERP API, shows the price first with Run it for $0.002?, a bot presses YES, and a ranked top 10 SERP bar chart grows. SEO data, priced before you pay." />
+  <img src="docs/screenshots/home.png" width="1100" alt="DataForSEO Agent home screen in the terminal: chat sidebar on the left, the prompt with four starter questions, and the three Homies walking past a keyword ideas station" />
 </p>
 
 <h1 align="center">DataForSEO Agent</h1>
@@ -40,10 +40,6 @@ Claude, ChatGPT, Gemini and 75+ AI model providers.
 ## See it running
 
 Real screenshots from one sitting, about 10 cents of DataForSEO credit in total.
-
-<p align="center">
-  <img src="docs/screenshots/home.png" width="1100" alt="DataForSEO Agent home screen in the terminal: chat sidebar on the left, the prompt with four starter questions, and the three Homies walking past a keyword ideas station" />
-</p>
 
 **It asks before it spends.** The plan, the estimate, then a prompt with the list price and the exact endpoint. Nothing is sent until you accept.
 
