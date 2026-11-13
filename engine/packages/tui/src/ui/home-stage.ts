@@ -1,5 +1,5 @@
-// DataForSEO Agent: the home screen stage. Daniel's three Homies (red, yellow, green, drawn twice the size of
-// the chat strip so the shine, eyes and feet read) walk a road past six DataForSEO stations and work each one:
+// DataForSEO Agent: the home screen stage. Daniel's three Homies (red, yellow, green, at the kit's own heights)
+// walk a road past six DataForSEO stations and work each one:
 // keyword ideas grow into volume bars, the site climbs a result page, On-Page problems get fixed, backlinks
 // connect, a local rank grid turns green and an AI answer cites the site. One Homie fires its red laser at the
 // station while the others watch; every finished station moves the rank up, and #1 sets off fireworks.
@@ -10,10 +10,10 @@
 import { PixelCanvas, type Cell } from "./bots"
 import { TIPS, rotate } from "./home-crew"
 
-/** Text rows of the stage (28 pixels): a HUD row, the Homies and their stations, the road, a caption row. */
-export const STAGE_ROWS = 14
+/** Text rows of the stage (18 pixels): a HUD row, the Homies and their stations, the road, a caption row. */
+export const STAGE_ROWS = 9
 /** Columns the stage needs: the three Homies and one station side by side. */
-export const STAGE_MIN_WIDTH = 96
+export const STAGE_MIN_WIDTH = 76
 
 const INK = "#1a1c2c"
 const PAPER = "#ffffff"
@@ -37,17 +37,21 @@ const SPARK = ["#ffffff", "#ffd166", "#8fd3ff", GOOD]
 const FIRE = ["#ffd166", WARN, BAD]
 
 // The Homies as in the kit (5 pixels wide, a rounded head, a white shine, two eyes, feet), with the logo's
-// rising bar heights: red 6, yellow 8, green 10 pixels. c body, s shine, e eye, f feet, h blush.
+// rising bar heights as in the kit: red 8, yellow 10, green 13 pixels. c body, s shine, e eye, f feet, h blush.
 const HOMIES = [
-  { c: "#F44336", s: PAPER, e: INK, f: "#922820", h: "#ff9bb3", rows: 6 },
-  { c: "#FFC107", s: PAPER, e: INK, f: "#997404", h: "#ff9bb3", rows: 8 },
-  { c: "#7ED957", s: PAPER, e: INK, f: "#4C8234", h: "#ff9bb3", rows: 10 },
+  { c: "#F44336", s: PAPER, e: INK, f: "#922820", h: "#ff9bb3", rows: 8 },
+  { c: "#FFC107", s: PAPER, e: INK, f: "#997404", h: "#ff9bb3", rows: 10 },
+  { c: "#7ED957", s: PAPER, e: INK, f: "#4C8234", h: "#ff9bb3", rows: 13 },
 ]
-const BW = 10
-const GAP = 3
-const FLOOR = 24
+/** Screen pixels per sprite pixel. */
+const S = 1
+const BW = 5 * S
+const GAP = 2
+const FLOOR = 14
 const PW = 46
-const PANEL_TOP = 4
+const PANEL_TOP = 2
+/** The sprite row the eyes are on. */
+const EYES = 3
 const GRAVITY = 90
 
 type Kind = "keywords" | "serp" | "onpage" | "backlinks" | "maps" | "ai"
@@ -143,9 +147,9 @@ const count = (n: number) => Math.round(n).toLocaleString("en-US")
 
 /** A Homie sprite: its body rows under the head, and the walk step. */
 export function homie(bot: number, step: number, happy = false) {
-  const body = Array<string>(HOMIES[bot].rows - 4).fill("ccccc")
+  const body = Array<string>(HOMIES[bot].rows - 5).fill("ccccc")
   if (happy) body[0] = "hccch"
-  return [".ccc.", "csccc", "cecec", ...body, step ? ".f.f." : "f...f"]
+  return [".ccc.", "csccc", "ccccc", "cecec", ...body, step ? ".f.f." : "f...f"]
 }
 
 export class HomeStage {
@@ -255,10 +259,10 @@ export class HomeStage {
     this.since = this.time
     this.rank = RANKS[this.station % RANKS.length]
     this.clicks += station.clicks
-    this.float(x + PW - station.done.length - 3, PANEL_TOP - 2, `✓ ${station.done}`, GOOD, 2)
-    this.burst(x + PW / 2, PANEL_TOP + 2, 14, SPARK, 9)
+    this.float(x + PW - station.done.length - 4, PANEL_TOP, `✓ ${station.done}`, GOOD, 2)
+    this.burst(x + PW / 2, PANEL_TOP + 2, 12, SPARK, 8)
     this.bots.forEach((bot, i) => {
-      bot.vy = -24 - i * 2
+      bot.vy = -20 - i
       bot.happyUntil = this.time + CHEER
       if (this.rank === 1) bot.flip = this.time
     })
@@ -296,7 +300,7 @@ export class HomeStage {
     const i = this.botAt(col)
     if (i < 0 || this.bots[i].vy !== 0 || this.time - (this.hopped.get(i) ?? -9) < 1) return
     this.hopped.set(i, this.time)
-    this.bots[i].vy = -16
+    this.bots[i].vy = -13
   }
 
   /**
@@ -309,7 +313,7 @@ export class HomeStage {
     const i = this.botAt(col)
     if (i >= 0) {
       const bot = this.bots[i]
-      bot.vy = -30
+      bot.vy = -24
       bot.flip = this.time
       this.burst(this.botX(i) + BW / 2, FLOOR - 2, 6, SPARK, 6)
       if (this.next() < 0.7) {
@@ -321,11 +325,11 @@ export class HomeStage {
     const x = this.stationX(this.station)
     if (this.phase === "work" && col >= x && col < x + PW) {
       this.boost += 1.2
-      this.burst(col, PANEL_TOP + 8, 8, FIRE, 8)
+      this.burst(col, PANEL_TOP + 5, 8, FIRE, 8)
       return "hit"
     }
     this.bots.forEach((bot, k) => {
-      if (bot.vy === 0) bot.vy = -22 - k * 2
+      if (bot.vy === 0) bot.vy = -18 - k
     })
     return "jump"
   }
@@ -359,7 +363,7 @@ export class HomeStage {
     // The Homies walk in front of a station: its text gives way where one of them stands.
     const hidden = canvas.labels.filter((label) =>
       poses.some((pose, i) => {
-        const top = FLOOR - HOMIES[i].rows * 2 + Math.round(this.bots[i].y)
+        const top = FLOOR - HOMIES[i].rows * S + Math.round(this.bots[i].y)
         return label.x >= pose.x && label.x < pose.x + BW && label.row >= Math.floor(top / 2) && label.row * 2 < FLOOR
       }),
     )
@@ -374,14 +378,14 @@ export class HomeStage {
   private drawSky(canvas: PixelCanvas) {
     for (let k = 0; k < this.width / 11; k++) {
       const x = (((((k * 37) % 997) * 7 - Math.round(this.scroll * 0.1)) % this.width) + this.width) % this.width
-      canvas.dot(x, 2 + ((k * 5) % 7), STAR)
+      canvas.dot(x, 2 + ((k * 5) % 6), STAR)
     }
     // A skyline far behind the road, drifting at a quarter of the walking speed.
     const shift = Math.round(this.scroll * 0.25)
     for (let b = Math.floor(shift / 13) - 1; b * 13 - shift < this.width; b++) {
       const seed = ((b * 2654435761) >>> 0) % 1000
       const w = 7 + (seed % 5)
-      const h = 5 + (seed % 9)
+      const h = 3 + (seed % 7)
       const x0 = b * 13 - shift
       for (let x = x0; x < x0 + w; x++)
         for (let y = FLOOR - h; y < FLOOR; y++) {
@@ -409,25 +413,17 @@ export class HomeStage {
     const rows = rotate(homie(i, pose.step, pose.happy), pose.turn)
     // A slow breath while standing: the head rises one pixel now and then.
     const breath = this.phase !== "walk" && bot.vy === 0 && (this.time * 0.8 + i * 0.37) % 1 < 0.18 ? 1 : 0
-    const x0 = pose.x + Math.floor((BW - rows[0].length * 2) / 2)
-    const y0 = FLOOR - rows.length * 2 + Math.round(bot.y)
+    const x0 = pose.x + Math.floor((BW - rows[0].length * S) / 2)
+    const y0 = FLOOR - rows.length * S + Math.round(bot.y)
     rows.forEach((row, r) =>
       [...row].forEach((key, c) => {
         if (key === ".") return
-        const x = x0 + c * 2
         // Breathing in lifts everything above the feet by a pixel; the lowest body row stretches to cover the gap.
         const lifted = breath === 1 && key !== "f" && pose.turn === 0
-        const y = y0 + r * 2 - (lifted ? 1 : 0)
-        const color = key === "e" && pose.eyes === "laser" ? LASER : pal[key as "c"]
-        const top = key === "e" && pose.eyes === "closed" ? pal.c : key === "h" ? pal.c : color
-        canvas.dot(x, y, top)
-        canvas.dot(x + 1, y, top)
-        canvas.dot(x, y + 1, color)
-        canvas.dot(x + 1, y + 1, color)
-        if (lifted && r === rows.length - 2) {
-          canvas.dot(x, y + 2, color)
-          canvas.dot(x + 1, y + 2, color)
-        }
+        const y = y0 + r * S - (lifted ? 1 : 0)
+        const color = key === "e" && pose.eyes === "laser" ? LASER : key === "e" && pose.eyes === "closed" ? pal.c : pal[key as "c"]
+        for (let dy = 0; dy < S + (lifted && r === rows.length - 2 ? 1 : 0); dy++)
+          for (let dx = 0; dx < S; dx++) canvas.dot(x0 + c * S + dx, y + dy, color)
       }),
     )
   }
@@ -436,7 +432,7 @@ export class HomeStage {
   private drawLaser(canvas: PixelCanvas, poses: ReturnType<HomeStage["poses"]>) {
     const i = this.worker()
     if (poses[i].eyes !== "laser") return
-    const y = FLOOR - HOMIES[i].rows * 2 + 4 + (Math.floor(this.time * 20) % 2)
+    const y = FLOOR - HOMIES[i].rows * S + EYES * S
     const to = this.stationX(this.station)
     for (let x = poses[i].x + BW; x < to; x++) if ((x + Math.floor(this.time * 40)) % 5 !== 0) canvas.dot(x, y, LASER)
     if (Math.floor(this.time * 30) % 3 === 0) this.burst(to, y, 1, FIRE, 5)
@@ -452,29 +448,26 @@ export class HomeStage {
       const room = x + PW - 2 - (x + col)
       canvas.label(x + col, row, value.slice(0, Math.max(0, room)), fg, bg)
     }
-    text(2, 2, ` ${station.title} `, INK, station.color)
+    text(2, 1, ` ${station.title} `, INK, station.color)
     if (station.kind === "keywords") {
-      text(2, 3, "bar = searches, color = difficulty", DIM)
       const heights = [0.5, 0.9, 0.35, 1, 0.6, 0.75, 0.3, 0.45]
       const tiers = [GOOD, WARN, GOOD, BAD, GOLD, WARN, GOOD, GOLD]
       heights.forEach((h, i) => {
-        const tall = Math.round(11 * h * ease(part(p, i * 0.07, i * 0.07 + 0.45)))
-        for (let y = 20 - tall; y < 20; y++) for (let c = 0; c < 4; c++) canvas.dot(x + 3 + i * 5 + c, y, tiers[i])
+        const tall = Math.round(8 * h * ease(part(p, i * 0.07, i * 0.07 + 0.45)))
+        for (let y = 12 - tall; y < 12; y++) for (let c = 0; c < 4; c++) canvas.dot(x + 3 + i * 5 + c, y, tiers[i])
       })
-      text(2, 10, `${count(740 * ease(p))} ideas for "crm"`, p >= 1 ? GOOD : MUTED)
+      text(PW - 21, 6, `${count(740 * ease(p))} ideas for "crm"`.padStart(18), p >= 1 ? GOOD : MUTED)
     }
     if (station.kind === "serp") {
-      text(2, 3, '"best crm" in the US', DIM)
       const top = RANKS[k % RANKS.length]
       const ours = 4 - Math.min(4, Math.floor(p * 5))
       const others = ["rival.com", "bigcrm.io", "crmhub.co", "salesly.app"]
       const list = [...others.slice(0, ours), "yoursite.com", ...others.slice(ours)]
       list.forEach((domain, i) => {
         const line = ` #${top + i}`.padEnd(6) + domain
-        if (i === ours) text(2, 4 + i, line.padEnd(PW - 5), INK, GOLD)
-        else text(2, 4 + i, line, MUTED)
+        if (i === ours) text(2, 2 + i, line.padEnd(PW - 5), INK, GOLD)
+        else text(2, 2 + i, line, MUTED)
       })
-      text(2, 10, p >= 1 ? "▲ yoursite.com up 4 places" : "re-ranking…", p >= 1 ? GOOD : DIM)
     }
     if (station.kind === "onpage") {
       const checks = [
@@ -485,22 +478,22 @@ export class HomeStage {
       ]
       checks.forEach(([before, after], i) => {
         const fixed = p > (i + 1) * 0.2
-        text(2, 4 + i, fixed ? `✓ ${after}` : `✗ ${before}`, fixed ? GOOD : BAD)
+        text(2, 2 + i, fixed ? `✓ ${after}` : `✗ ${before}`, fixed ? GOOD : BAD)
       })
       const score = Math.round(41 + 55 * ease(p))
       const fill = Math.round(score / 5)
       const color = score >= 90 ? GOOD : score >= 50 ? GOLD : BAD
-      text(2, 9, "Health", MUTED)
-      text(9, 9, "█".repeat(fill), color)
-      text(9 + fill, 9, "░".repeat(20 - fill), BORDER)
-      text(30, 9, ` ${score}/100`, color)
+      text(2, 6, "Health", MUTED)
+      text(9, 6, "█".repeat(fill), color)
+      text(9 + fill, 6, "░".repeat(20 - fill), BORDER)
+      text(30, 6, ` ${score}/100`, color)
     }
     if (station.kind === "backlinks") {
       const site = " yoursite.com "
       const sx = PW - site.length - 3
-      text(sx, 6, site, INK, GOLD)
+      text(sx, 4, site, INK, GOLD)
       ;[" blog.io ", " news.co ", " wiki.org "].forEach((domain, i) => {
-        const row = 4 + i * 2
+        const row = 2 + i * 2
         const grown = part(p, i * 0.25, i * 0.25 + 0.35)
         text(2, row, domain, PAPER, CHIP)
         // An elbow from the domain to the site, drawn as it links.
@@ -508,13 +501,13 @@ export class HomeStage {
         const from = x + 2 + domain.length
         const mid = x + sx - 5
         for (let px = from; px <= mid; px++) path.push([px, row * 2 + 1])
-        for (let y = row * 2 + 1; y !== 13; y += row < 6 ? 1 : -1) path.push([mid, y])
-        for (let px = mid; px < x + sx; px++) path.push([px, 13])
+        for (let y = row * 2 + 1; y !== 9; y += row < 4 ? 1 : -1) path.push([mid, y])
+        for (let px = mid; px < x + sx; px++) path.push([px, 9])
         path.slice(0, Math.round(path.length * grown)).forEach(([px, y], n) => {
           if (grown >= 1 || n % 2 === 0) canvas.dot(px, y, grown >= 1 ? GOOD : MUTED)
         })
       })
-      text(2, 10, `referring domains ${count(1281 + 3 * ease(p))}`, p >= 1 ? GOOD : MUTED)
+      text(sx, 6, `${count(1281 + 3 * ease(p))} domains`, p >= 1 ? GOOD : MUTED)
     }
     if (station.kind === "maps") {
       const before = [
@@ -531,24 +524,23 @@ export class HomeStage {
           const value = p > far * 0.85 + 0.08 ? 1 + ((r + c) % 3) : rank
           if (value <= 3) top3++
           const bg = value <= 3 ? GOOD : value <= 10 ? GOLD : BAD
-          text(2 + c * 5, 4 + r, String(value).padStart(3).padEnd(4), INK, bg)
+          text(2 + c * 5, 2 + r, String(value).padStart(3).padEnd(4), INK, bg)
         }),
       )
-      text(29, 4, "5 x 5 grid", DIM)
-      text(29, 6, "Top 3 share", MUTED)
-      text(29, 7, `${Math.round((top3 / 25) * 100)}%`, top3 === 25 ? GOOD : GOLD)
+      text(29, 2, "5 x 5 grid", DIM)
+      text(29, 4, "Top 3 share", MUTED)
+      text(29, 5, `${Math.round((top3 / 25) * 100)}%`, top3 === 25 ? GOOD : GOLD)
     }
     if (station.kind === "ai") {
-      text(2, 3, 'asked: "best crm for a small team"', DIM)
+      text(2, 2, 'asked: "best crm for a small team"', DIM)
       const lines = ["Reviewers of small team CRMs", "most often recommend", "yoursite.com [1]"]
       let typed = Math.round(lines.join("").length * part(p, 0, 0.8))
       lines.forEach((line, i) => {
         const shown = line.slice(0, Math.max(0, typed))
         typed -= line.length
-        text(2, 5 + i, shown, i === 2 ? GOLD : PAPER)
+        text(2, 3 + i, shown, i === 2 ? GOLD : PAPER)
       })
-      text(2, 9, `LLM mentions ${Math.round(3 + 14 * ease(p))}`, p >= 1 ? GOOD : MUTED)
-      if (p >= 1) text(2, 10, "cited in 4 of 5 AI answers", GOOD)
+      text(2, 6, `LLM mentions ${Math.round(3 + 14 * ease(p))}` + (p >= 1 ? " · cited in 4 of 5 answers" : ""), p >= 1 ? GOOD : MUTED)
     }
   }
 
@@ -584,12 +576,12 @@ export class HomeStage {
       const col = Math.max(0, Math.min(this.width - f.text.length, Math.round(f.x)))
       canvas.label(col, Math.max(0, Math.floor(f.y / 2) - lift), f.text, f.fg, "")
     })
+    // What a Homie says is written under it, below the road, like a subtitle; it stops short of the endpoint.
     this.bots.forEach((bot, k) => {
       if (!bot.say) return
       const text = ` ${bot.say} `
-      const top = FLOOR - HOMIES[k].rows * 2 + Math.round(bot.y)
-      const col = Math.max(0, Math.min(this.width - text.length, poses[k].x - 1))
-      canvas.label(col, Math.max(1, Math.floor(top / 2) - 2), text, INK, PAPER)
+      const col = Math.max(0, Math.min(poses[k].x, x - 1 - text.length))
+      canvas.label(col, STAGE_ROWS - 1, text, INK, PAPER)
     })
   }
 }
