@@ -4,6 +4,7 @@ import { createEffect, createMemo, createSignal, onMount, Show, untrack } from "
 import { HomeStarters, showHomeStarters } from "../feature-plugins/home/starters"
 import { HomeCrewStrip } from "../component/crew"
 import { HOME_ROWS } from "../ui/home-crew"
+import { STAGE_MIN_WIDTH, STAGE_ROWS } from "../ui/home-stage"
 import { Logo } from "../component/logo"
 import { useArgs } from "../context/args"
 import { useRouteData } from "../context/route"
@@ -31,6 +32,13 @@ export function Home() {
   const route = useRouteData("home")
   const promptRef = usePromptRef()
   const [promptHeight, setPromptHeight] = createSignal(0)
+  // The crew takes the width of the home pane (the chat sidebar may sit beside it), not of the terminal.
+  const [crewWidth, setCrewWidth] = createSignal(0)
+  const crewRows = () => {
+    const height = dimensions().height
+    if (height >= 24 + STAGE_ROWS && crewWidth() >= STAGE_MIN_WIDTH) return STAGE_ROWS
+    return height >= 16 + HOME_ROWS ? HOME_ROWS : 0
+  }
   const [ref, setRef] = createSignal<PromptRef | undefined>()
   const args = useArgs()
   const local = useLocal()
@@ -132,11 +140,20 @@ export function Home() {
         <box flexGrow={1} minHeight={0} />
       </box>
       {/* DataForSEO Agent: the crew wanders the floor above the footer; point at them or click one. */}
-      <Show when={dimensions().height >= 16 + HOME_ROWS && dimensions().width >= 40}>
-        <box width="100%" height={HOME_ROWS} flexShrink={0} paddingLeft={2} paddingRight={2}>
-          <HomeCrewStrip width={dimensions().width - 4} />
-        </box>
-      </Show>
+      <box
+        width="100%"
+        height={crewRows()}
+        flexShrink={0}
+        paddingLeft={2}
+        paddingRight={2}
+        onSizeChange={function (this: BoxRenderable) {
+          setCrewWidth(Math.max(0, this.width - 4))
+        }}
+      >
+        <Show when={crewRows() > 0 && crewWidth() >= 40 ? crewRows() : undefined} keyed>
+          {(rows) => <HomeCrewStrip width={crewWidth()} stage={rows === STAGE_ROWS} />}
+        </Show>
+      </box>
       <box width="100%" flexShrink={0}>
         <Slot path="home.footer" />
       </box>

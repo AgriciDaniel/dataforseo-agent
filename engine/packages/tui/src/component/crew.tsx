@@ -8,6 +8,7 @@ import { useConfig } from "../config"
 import { requestPath, requestTarget } from "@dataforseo-agent/util/dataforseo"
 import type { Cell } from "../ui/bots"
 import { CHAT_ROWS, HomeCrew } from "../ui/home-crew"
+import { HomeStage } from "../ui/home-stage"
 import {
   AFTER_TURN,
   STILL,
@@ -75,10 +76,11 @@ export function CellRows(props: { rows: Cell[][]; onPress?: (col: number) => voi
  * The home screen crew along the bottom: the bots wander, look at the pointer, and hop and say a tip when
  * clicked. One 50 ms timer while animating; with animations off they stand still but still answer a click.
  */
-export function HomeCrewStrip(props: { width: number }) {
+export function HomeCrewStrip(props: { width: number; stage?: boolean }) {
   const config = useConfig().data
   const animate = () => config.animations ?? true
-  const crew = new HomeCrew(Math.max(20, props.width))
+  // With room, the big stage (the Homies working DataForSEO stations); otherwise the short strip.
+  const crew = props.stage ? new HomeStage(Math.max(20, props.width)) : new HomeCrew(Math.max(20, props.width))
   const [rows, setRows] = createSignal(crew.frame())
   let last = Date.now()
   const timer = setInterval(

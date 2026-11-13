@@ -235,6 +235,31 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
                 </Show>
               )}
               lead={paid() && size().width >= 100 ? <ApprovalCrew /> : undefined}
+              compact={
+                paid() && current.paid
+                  ? {
+                      // The price leads: it is what is being approved. Then what is called, with what.
+                      heading: (
+                        <text wrapMode="none" truncate paddingLeft={1}>
+                          <span style={{ fg: theme.text.feedback.warning.base, bold: true }}>{current.paid.amount}</span>
+                          <span style={{ fg: theme.text.muted }}>{`  ${current.paid.method} `}</span>
+                          <span style={{ fg: theme.text.base, bold: true }}>{current.paid.path}</span>
+                          <span style={{ fg: theme.text.muted }}>
+                            {current.paid.tasks > 1 ? `  ${current.paid.tasks} tasks` : ""}
+                          </span>
+                        </text>
+                      ),
+                      detail: (option) => (
+                        <text fg={theme.text.muted} wrapMode="none" truncate paddingLeft={1}>
+                          {option === "always"
+                            ? "Always allow this endpoint in this project, without asking."
+                            : current.paid!.params || "No parameters."}
+                        </text>
+                      ),
+                      footnote: current.paid.note,
+                    }
+                  : undefined
+              }
               hotkeys={paid() ? { once: "y", chat: "a", reject: "n" } : undefined}
               options={
                 paid()
@@ -443,6 +468,11 @@ export function SessionQuestion<const T extends Record<string, string>>(props: {
   lead?: JSX.Element
   /** Single keys that pick a choice straight away, such as y for Accept and n for Deny. */
   hotkeys?: Partial<Record<keyof T, string>>
+  /**
+   * A short form used until the prompt is opened full screen: the lead on the left, and beside it one heading
+   * row, one detail row, the choices, and a line of fine print. Only the chosen option is filled in.
+   */
+  compact?: { heading: JSX.Element; detail: (option: keyof T) => JSX.Element; footnote?: string }
   onSelect: (option: keyof T) => void
 }) {
   const theme = useTheme()
@@ -528,6 +558,126 @@ export function SessionQuestion<const T extends Record<string, string>>(props: {
   const hint = createMemo(() => (store.expanded ? "minimize" : "fullscreen"))
   useRenderer()
 
+  const actions = () => (
+        <box
+          id={`${id()}.actions`}
+          ref={SimulationSemantics.bind(() => ({
+            instance: props.instance,
+            role: "listbox",
+            label: props.choicesLabel ?? "Permission choices",
+          }))}
+          flexDirection="row"
+          gap={1}
+          flexShrink={0}
+        >
+          <For each={keys}>
+            {(option) => (
+              <box
+                id={`${id()}.action.${String(option)}`}
+                ref={SimulationSemantics.bind(() => ({
+                  instance: props.instance,
+                  role: "option",
+                  label: props.options[option],
+                  focused: option === store.selected,
+                  selected: option === store.selected,
+                  disabled: false,
+                }))}
+                paddingLeft={1}
+                paddingRight={1}
+                backgroundColor={
+                  option === store.selected
+                    ? theme.background.action.primary.focused
+                    : props.compact && !store.expanded
+                      ? undefined
+                      : theme.background.action.primary.base
+                }
+                onMouseMove={() => setStore("selected", option)}
+                onMouseUp={() => {
+                  setStore("selected", option)
+                  props.onSelect(option)
+                }}
+              >
+                <text
+                  fg={
+                    option === store.selected
+                      ? theme.text.action.primary.focused
+                      : props.compact && !store.expanded
+                        ? theme.text.base
+                        : theme.text.action.primary.base
+                  }
+                >
+                  {props.options[option]}
+                  <Show when={props.hotkeys?.[option]}>
+                    {(key) => <span style={{ fg: theme.text.muted }}>{` ${key()}`}</span>}
+                  </Show>
+                </text>
+              </box>
+            )}
+          </For>
+        </box>
+  )
+  const hints = () => (
+        <box flexDirection="row" gap={2} flexShrink={0}>
+          <Show when={props.fullscreen && (!props.hotkeys || dimensions().width >= 130)}>
+            <text fg={theme.text.base}>
+              {shortcuts.get("permission.prompt.fullscreen")} <span style={{ fg: theme.text.muted }}>{hint()}</span>
+            </text>
+          </Show>
+          {/* With a key on every button, the select and confirm hints only crowd the row. */}
+          <Show when={!props.hotkeys}>
+            <Show when={keys.length > 1}>
+              <text fg={theme.text.base}>
+                {"⇆"} <span style={{ fg: theme.text.muted }}>select</span>
+              </text>
+            </Show>
+            <text fg={theme.text.base}>
+              enter <span style={{ fg: theme.text.muted }}>confirm</span>
+            </text>
+          </Show>
+        </box>
+  )
+  // The short form: the lead beside one heading row, one detail row, the choices and the fine print.
+  const compact = (short: NonNullable<typeof props.compact>) => (
+    <box
+      id={id()}
+      ref={SimulationSemantics.bind(() => ({
+        instance: props.instance,
+        role: "dialog",
+        label: props.semanticLabel ?? props.title,
+        expanded: false,
+      }))}
+      backgroundColor={theme.background.raised.base}
+      border={["left"]}
+      borderColor={theme.background.action.primary.focused}
+      customBorderChars={SplitBorder.customBorderChars}
+      flexDirection="row"
+      gap={2}
+      paddingLeft={2}
+      paddingRight={3}
+      paddingTop={1}
+      paddingBottom={1}
+    >
+      <Show when={props.lead}>{props.lead}</Show>
+      <box flexGrow={1} minWidth={0} flexDirection="column">
+        <box height={1} flexShrink={0}>
+          {short.heading}
+        </box>
+        <box height={1} flexShrink={0}>
+          {short.detail(store.selected)}
+        </box>
+        <box flexDirection="row" flexShrink={0} justifyContent="space-between" gap={1}>
+          {actions()}
+          <Show when={!narrow()}>{hints()}</Show>
+        </box>
+        <Show when={short.footnote}>
+          <text fg={theme.text.muted} wrapMode="none" truncate paddingLeft={1}>
+            {short.footnote}
+          </text>
+        </Show>
+      </box>
+    </box>
+  )
+
   const content = () => (
     <box
       id={id()}
@@ -582,80 +732,18 @@ export function SessionQuestion<const T extends Record<string, string>>(props: {
       >
         <box flexDirection="row" gap={1} flexShrink={0} alignItems="center">
         <Show when={props.lead}>{props.lead}</Show>
-        <box
-          id={`${id()}.actions`}
-          ref={SimulationSemantics.bind(() => ({
-            instance: props.instance,
-            role: "listbox",
-            label: props.choicesLabel ?? "Permission choices",
-          }))}
-          flexDirection="row"
-          gap={1}
-          flexShrink={0}
-        >
-          <For each={keys}>
-            {(option) => (
-              <box
-                id={`${id()}.action.${String(option)}`}
-                ref={SimulationSemantics.bind(() => ({
-                  instance: props.instance,
-                  role: "option",
-                  label: props.options[option],
-                  focused: option === store.selected,
-                  selected: option === store.selected,
-                  disabled: false,
-                }))}
-                paddingLeft={1}
-                paddingRight={1}
-                backgroundColor={
-                  option === store.selected
-                    ? theme.background.action.primary.focused
-                    : theme.background.action.primary.base
-                }
-                onMouseMove={() => setStore("selected", option)}
-                onMouseUp={() => {
-                  setStore("selected", option)
-                  props.onSelect(option)
-                }}
-              >
-                <text
-                  fg={option === store.selected ? theme.text.action.primary.focused : theme.text.action.primary.base}
-                >
-                  {props.options[option]}
-                  <Show when={props.hotkeys?.[option]}>
-                    {(key) => <span style={{ fg: theme.text.muted }}>{` ${key()}`}</span>}
-                  </Show>
-                </text>
-              </box>
-            )}
-          </For>
+        {actions()}
         </box>
-        </box>
-        <box flexDirection="row" gap={2} flexShrink={0}>
-          <Show when={props.fullscreen && (!props.hotkeys || dimensions().width >= 130)}>
-            <text fg={theme.text.base}>
-              {shortcuts.get("permission.prompt.fullscreen")} <span style={{ fg: theme.text.muted }}>{hint()}</span>
-            </text>
-          </Show>
-          {/* With a key on every button, the select and confirm hints only crowd the row. */}
-          <Show when={!props.hotkeys}>
-            <Show when={keys.length > 1}>
-              <text fg={theme.text.base}>
-                {"⇆"} <span style={{ fg: theme.text.muted }}>select</span>
-              </text>
-            </Show>
-            <text fg={theme.text.base}>
-              enter <span style={{ fg: theme.text.muted }}>confirm</span>
-            </text>
-          </Show>
-        </box>
+        {hints()}
       </box>
     </box>
   )
 
   return (
     <Show when={!store.expanded} fallback={<Portal>{content()}</Portal>}>
-      {content()}
+      <Show when={props.compact} fallback={content()}>
+        {(short) => compact(short())}
+      </Show>
     </Show>
   )
 }

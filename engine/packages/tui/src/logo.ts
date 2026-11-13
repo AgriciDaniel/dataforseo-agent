@@ -8,11 +8,6 @@ export const MARK = [
   "YKKKKY",
   ".YYYKK",
 ]
-/**
- * The sidebar mark: the same magnifier drawn 6 by 4 pixels (ring sides, blue above, yellow below, the handle at the
- * bottom right). It sits one pixel down in 3 text rows, so it is 2 rows tall and centred on the middle row.
- */
-export const MARK_SMALL = ["......", ".BBBB.", "BKBBKB", "YKYYKY", ".YKKKK", "......"]
 /** The wordmark row the mark starts on (the wordmark's first row is blank). */
 export const MARK_TOP = 1
 // DataForSEO brand blue and yellow; the ring is near black so it reads on light and dark backgrounds.

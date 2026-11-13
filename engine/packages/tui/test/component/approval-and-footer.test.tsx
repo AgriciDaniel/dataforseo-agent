@@ -90,3 +90,54 @@ test("the footer menu picks with enter only after the arrow keys moved the highl
     app.renderer.destroy()
   }
 })
+
+test("a paid call asks in four rows: price and endpoint, parameters, choices, fine print", async () => {
+  await using tmp = await tmpdir()
+  const { SessionQuestion } = await import("../../src/routes/session/permission")
+  const { ApprovalCrew } = await import("../../src/component/approval-crew")
+  const picked: string[] = []
+  const app = await testRender(
+    () => (
+      <TestTuiContexts directory={tmp.path} paths={{ home: tmp.path, state: tmp.path, worktree: tmp.path }}>
+        <ConfigProvider config={createTuiResolvedConfig({ animations: false })}>
+          <Keymap.Provider>
+            <ThemeProvider mode="dark" source={emptyThemeSource}>
+              <SessionQuestion
+                title="Permission required"
+                instance="req"
+                body={<text>full body</text>}
+                lead={<ApprovalCrew />}
+                hotkeys={{ once: "y", chat: "a", reject: "n" }}
+                options={{ once: "Accept", chat: "Allow all in chat", always: "Always this endpoint", reject: "Deny" }}
+                compact={{
+                  heading: <text>$0.06 POST /v3/keywords_data/google_ads/search_volume/task_post</text>,
+                  detail: (option) => <text>{option === "always" ? "always text" : "keywords [ai marketing]"}</text>,
+                  footnote: "List price $0.06 per task.",
+                }}
+                fullscreen
+                onSelect={(option) => picked.push(option)}
+              />
+            </ThemeProvider>
+          </Keymap.Provider>
+        </ConfigProvider>
+      </TestTuiContexts>
+    ),
+    { width: 120, height: 10, kittyKeyboard: true },
+  )
+  try {
+    await app.renderOnce()
+    const lines = app.captureCharFrame().split("\n")
+    if (process.env.APPROVAL_SNAPSHOT) await Bun.write(process.env.APPROVAL_SNAPSHOT, lines.join("\n"))
+    const row = (text: string) => lines.findIndex((line) => line.includes(text))
+    expect(row("$0.06 POST")).toBeGreaterThanOrEqual(0)
+    expect(row("keywords [ai marketing]")).toBe(row("$0.06 POST") + 1)
+    expect(row("Accept")).toBe(row("$0.06 POST") + 2)
+    expect(row("List price")).toBe(row("$0.06 POST") + 3)
+    expect(lines.join("\n")).not.toContain("full body")
+    app.mockInput.pressKey("y")
+    await app.renderOnce()
+    expect(picked).toEqual(["once"])
+  } finally {
+    app.renderer.destroy()
+  }
+})

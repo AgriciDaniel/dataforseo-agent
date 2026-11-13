@@ -1,6 +1,6 @@
 import { Locale } from "./locale"
 import { canonicalToolName, finiteNumber, webSearchProviderLabel } from "./tool-display"
-import { priceLine, requestPath as canonicalPath, requestShape } from "@dataforseo-agent/util/dataforseo"
+import { minimumCost, priceLine, requestPath as canonicalPath, requestShape } from "@dataforseo-agent/util/dataforseo"
 
 type Dict = Record<string, unknown>
 
@@ -11,6 +11,18 @@ export type PermissionPresentation = {
   diff?: string
   patch?: string
   file?: string
+  /** A DataForSEO request, in pieces, for the compact paid call prompt. */
+  paid?: {
+    method: string
+    path: string
+    tasks: number
+    /** The headline amount: "$0.06", "from $0.012" when the bill depends on the results, "Free" or "Price ?". */
+    amount: string
+    /** The catalog price line, as in `lines`. */
+    note: string
+    /** The first task's parameters on one line, such as `keywords ["ai marketing"] · location_code 2840`. */
+    params: string
+  }
 }
 
 export type PermissionPresentationInput = {
@@ -149,6 +161,21 @@ export function permissionPresentation(
     const body = called.data ?? called.params ?? called.body
     // Each array item is one task, billed separately: say how many before the body gets cut short.
     const tasks = Array.isArray(body) ? body.length : body === undefined ? 0 : 1
+    const endpoint = canonicalPath(requestPath) ?? requestPath
+    const priority = requestShape(called).priority
+    const note = priceLine(endpoint, tasks, priority)
+    const cost = "$" + Number(minimumCost(endpoint, tasks, priority).toPrecision(4)).toString()
+    const amount = note.startsWith("Free")
+      ? "Free"
+      : note.startsWith("Price unknown")
+        ? "Price ?"
+        : note.includes("depends on the results")
+          ? `from ${cost}`
+          : cost
+    const first = dict(Array.isArray(body) ? body[0] : body)
+    const params = Object.entries(first)
+      .map(([key, value]) => `${key} ${typeof value === "string" ? value : short(value, 80)}`)
+      .join(" · ")
     return {
       icon: "$",
       title: `${method} ${requestPath}`,
@@ -156,8 +183,16 @@ export function permissionPresentation(
         `Tool: ${source.action}`,
         ...(tasks > 1 ? [`${tasks} tasks in this request, each billed.`] : []),
         ...(body !== undefined ? [`Body: ${short(body, 400)}`] : []),
-        priceLine(canonicalPath(requestPath) ?? requestPath, tasks, requestShape(called).priority),
+        note,
       ],
+      paid: {
+        method,
+        path: requestPath,
+        tasks,
+        amount,
+        note,
+        params: (params.length > 300 ? params.slice(0, 299) + "…" : params) + (tasks > 1 ? ` · and ${tasks - 1} more` : ""),
+      },
     }
   }
   return {

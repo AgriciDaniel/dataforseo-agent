@@ -10,7 +10,7 @@ import { useData } from "../context/data"
 import { useRoute } from "../context/route"
 import { useSessionTabs } from "../context/session-tabs"
 import { Slot } from "../plugin/render"
-import { MARK_SMALL, markCells } from "../logo"
+import { MARK, accent, markCells } from "../logo"
 import { tint } from "../theme/color"
 
 const colors = new Map<string, RGBA>()
@@ -30,7 +30,7 @@ export function filterChats<T extends { title: string }>(chats: readonly T[], qu
 }
 
 export function sidebarLayout(height: number) {
-  const available = Math.max(0, height - 5)
+  const available = Math.max(0, height - 8)
   return {
     chats: Math.min(6, available),
     panels: Math.max(0, Math.min(22, available - 6, Math.floor(available / 2))),
@@ -131,14 +131,16 @@ export function ChatSidebar(props: { width: number; onClose: () => void }) {
       flexShrink={0}
       flexDirection="column"
       backgroundColor={background()}
+      paddingTop={1}
       paddingLeft={1}
       paddingRight={1}
     >
-      {/* Brand header: the small DataForSEO mark centred on the name's row, and the fold control. Each mark row is
-          one text line, so the mark is exactly 6 columns wide and never runs into the name. */}
-      <box flexDirection="row" flexShrink={0} height={3} gap={2}>
-        <box flexDirection="column" flexShrink={0} width={MARK_SMALL[0].length}>
-          <For each={markCells(MARK_SMALL)}>
+      {/* Brand header: the DataForSEO mark exactly as in the home logo (6 by 6 pixels in 3 text rows), with the
+          name on its middle row in the wordmark's white and gold. Each mark row is one text line, so the mark is
+          exactly 6 columns wide and never runs into the name. */}
+      <box flexDirection="row" flexShrink={0} height={3} gap={2} paddingLeft={1}>
+        <box flexDirection="column" flexShrink={0} width={MARK[0].length}>
+          <For each={markCells(MARK)}>
             {(row) => (
               <text wrapMode="none" selectable={false}>
                 <For each={row}>
@@ -150,7 +152,7 @@ export function ChatSidebar(props: { width: number; onClose: () => void }) {
         </box>
         <box flexGrow={1} minWidth={0} justifyContent="center">
           <text fg={theme.text.base} attributes={TextAttributes.BOLD} wrapMode="none" selectable={false}>
-            DataForSEO
+            DataForSEO <span style={{ fg: hex(accent) }}>Agent</span>
           </text>
         </box>
         <box flexShrink={0} justifyContent="center">
@@ -159,15 +161,18 @@ export function ChatSidebar(props: { width: number; onClose: () => void }) {
           </text>
         </box>
       </box>
+      <box height={1} flexShrink={0} />
       <box
         id="chat-sidebar-new"
         flexShrink={0}
         height={1}
-        backgroundColor={theme.background.action.primary.base}
+        backgroundColor={tint(background(), theme.hue.interactive[200], hovered() === "new" ? 0.5 : 0.3)}
         paddingLeft={1}
+        onMouseOver={() => setHovered("new")}
+        onMouseOut={() => setHovered((value) => (value === "new" ? undefined : value))}
         onMouseUp={() => tabs.add()}
       >
-        <text fg={theme.text.action.primary.base} selectable={false}>
+        <text fg={theme.text.base} attributes={TextAttributes.BOLD} selectable={false}>
           + New chat
         </text>
       </box>
@@ -187,6 +192,7 @@ export function ChatSidebar(props: { width: number; onClose: () => void }) {
           onInput={(value: string) => setQuery(value)}
         />
       </box>
+      <box height={1} flexShrink={0} />
       <scrollbox
         id="chat-sidebar-chats"
         flexGrow={1}
