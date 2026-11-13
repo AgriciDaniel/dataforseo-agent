@@ -38,16 +38,16 @@ const STAR = "#2c3458"
 const SPARK = ["#ffffff", "#ffd166", "#8fd3ff", GOOD]
 const FIRE = ["#ffd166", WARN, BAD]
 
-// The Homies, slimmed from the kit to 4 pixels wide ( a rounded head, a white shine, two eyes, feet), with the logo's
-// rising bar heights, kept short so they stay small: red 5, yellow 6, green 7 pixels. c body, s shine, e eye, f feet, h blush.
+// The Homies as in the kit (5 pixels wide,  a rounded head, a white shine, two eyes, feet), with the logo's
+// rising bar heights, at about the kit heights of 7, 9 and 12: red 7, yellow 9, green 11 pixels. c body, s shine, e eye, f feet, h blush.
 const HOMIES = [
-  { c: "#F44336", s: PAPER, e: INK, f: "#922820", h: "#ff9bb3", rows: 5 },
-  { c: "#FFC107", s: PAPER, e: INK, f: "#997404", h: "#ff9bb3", rows: 6 },
-  { c: "#7ED957", s: PAPER, e: INK, f: "#4C8234", h: "#ff9bb3", rows: 7 },
+  { c: "#F44336", s: PAPER, e: INK, f: "#922820", h: "#ff9bb3", rows: 7 },
+  { c: "#FFC107", s: PAPER, e: INK, f: "#997404", h: "#ff9bb3", rows: 9 },
+  { c: "#7ED957", s: PAPER, e: INK, f: "#4C8234", h: "#ff9bb3", rows: 11 },
 ]
 /** Screen pixels per sprite pixel. */
 const S = 1
-const BW = 4 * S
+const BW = 5 * S
 const GAP = 2
 const FLOOR = 14
 const PW = 46
@@ -156,9 +156,9 @@ const count = (n: number) => Math.round(n).toLocaleString("en-US")
 
 /** A Homie sprite: its body rows under the head, and the walk step. */
 export function homie(bot: number, step: number, happy = false) {
-  const body = Array<string>(HOMIES[bot].rows - 4).fill("cccc")
-  if (happy) body[0] = "hcch"
-  return [".cc.", "cscc", "cece", ...body, step ? ".ff." : "f..f"]
+  const body = Array<string>(HOMIES[bot].rows - 4).fill("ccccc")
+  if (happy) body[0] = "hccch"
+  return [".ccc.", "csccc", "cecec", ...body, step ? ".f.f." : "f...f"]
 }
 
 export class HomeStage {

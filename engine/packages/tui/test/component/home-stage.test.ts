@@ -8,8 +8,8 @@ const text = (stage: HomeStage) =>
     .join("\n")
 
 test("the Homies keep the logo's rising bars: red, yellow and green are 5, 6 and 7 pixels tall", () => {
-  expect([0, 1, 2].map((bot) => homie(bot, 0).length)).toEqual([5, 6, 7])
-  expect(homie(0, 0)[2]).toBe("cece")
+  expect([0, 1, 2].map((bot) => homie(bot, 0).length)).toEqual([7, 9, 11])
+  expect(homie(0, 0)[2]).toBe("cecec")
 })
 
 test("the stage is a fixed size and the crew works DataForSEO stations up to #1", () => {

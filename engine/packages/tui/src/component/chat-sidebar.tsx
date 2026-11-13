@@ -11,7 +11,7 @@ import { useRoute } from "../context/route"
 import { useSessionTabs } from "../context/session-tabs"
 import { chatMarkers, chatNeedsUser, chatStateColor } from "../context/chat-state"
 import { Slot } from "../plugin/render"
-import { MARK_SIDEBAR, accent, markCells } from "../logo"
+import { MARK_SIDEBAR, accent, markSextants } from "../logo"
 import { tint } from "../theme/color"
 
 const colors = new Map<string, RGBA>()
@@ -138,12 +138,12 @@ export function ChatSidebar(props: { width: number; onClose: () => void }) {
       paddingLeft={1}
       paddingRight={1}
     >
-      {/* Brand header: the DataForSEO mark (6 by 4 pixels, the ring and its lens as in the logo) and the name on
+      {/* Brand header: the DataForSEO mark (8 by 6 pixels in sextants, 4 columns by 2 rows, the ring and its lens as in the logo) and the name on
           its middle row in the wordmark's white and gold. Each mark row is one text line, so it never runs into
           the name. */}
       <box flexDirection="row" flexShrink={0} height={2} gap={2} paddingLeft={1}>
-        <box flexDirection="column" flexShrink={0} width={MARK_SIDEBAR[0].length}>
-          <For each={markCells(MARK_SIDEBAR)}>
+        <box flexDirection="column" flexShrink={0} width={MARK_SIDEBAR[0].length / 2}>
+          <For each={markSextants(MARK_SIDEBAR)}>
             {(row) => (
               <text wrapMode="none" selectable={false}>
                 <For each={row}>

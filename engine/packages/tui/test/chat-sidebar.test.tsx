@@ -140,7 +140,8 @@ test("a wide terminal opens the chat sidebar on the left; « folds it and » bri
     expect(potato.indexOf("Potato keyword research")).toBeLessThan(42)
     expect(frame.split("Potato keyword research").length - 1).toBe(1)
     const fold = lines.findIndex((line) => line.includes("«"))
-    await setup.mockMouse.click(lines[fold].indexOf("«"), fold)
+    // Count columns by character: the mark's sextants take two UTF-16 units each.
+    await setup.mockMouse.click([...lines[fold]].indexOf("«"), fold)
     await waitForHighlightedFrame(setup, (next) => !next.includes("New chat"))
     const folded = setup.captureCharFrame()
     if (shots) await Bun.write(`${shots}/sidebar-160x45-folded.txt`, folded)
