@@ -1903,6 +1903,7 @@ export function Prompt(props: PromptProps) {
             />
             <box flexDirection="row" flexShrink={0} paddingTop={1} gap={1} justifyContent="space-between">
               <PromptMetadataRow
+                sessionID={props.sessionID}
                 mode={store.mode}
                 agent={agentLabel()}
                 auto={local.permission.mode === "autoaccept"}

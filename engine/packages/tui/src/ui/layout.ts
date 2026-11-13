@@ -24,3 +24,17 @@ export function clampSessionPaneWidth(width: number, total: number) {
   // Preserve the equal split when there is not enough room for both pane minima.
   return Math.max(Math.min(24, half), Math.min(width, Math.max(half, total - SESSION_CONTENT_MIN_WIDTH)))
 }
+
+export function clampResultsPaneWidth(width: number, total: number) {
+  return Math.min(Math.max(0, Math.floor(total) - 70), Math.max(30, Math.floor(width)))
+}
+
+export function showResultsPane(input: {
+  width: number
+  charts: number
+  folded: boolean
+  terminal: boolean
+  panel: boolean
+}) {
+  return input.width >= 150 && input.charts > 0 && !input.folded && !input.terminal && !input.panel
+}

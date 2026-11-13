@@ -3,13 +3,14 @@
 // current session's DataForSEO account, context and MCP panels (the "sidebar.content" slot that used to sit in
 // the right sidebar). It folds away with the sidebar keybind or the "«" control.
 import { RGBA, TextAttributes } from "@opentui/core"
+import { useTerminalDimensions } from "@opentui/solid"
 import { For, Show, createMemo, createSignal } from "solid-js"
 import { useTheme } from "../context/theme"
 import { useData } from "../context/data"
 import { useRoute } from "../context/route"
 import { useSessionTabs } from "../context/session-tabs"
 import { Slot } from "../plugin/render"
-import { MARK, markCells } from "../logo"
+import { MARK_SMALL, markCells } from "../logo"
 import { tint } from "../theme/color"
 
 const colors = new Map<string, RGBA>()
@@ -28,18 +29,30 @@ export function filterChats<T extends { title: string }>(chats: readonly T[], qu
   return q === "" ? [...chats] : chats.filter((chat) => chat.title.toLowerCase().includes(q))
 }
 
+export function sidebarLayout(height: number) {
+  const available = Math.max(0, height - 5)
+  return {
+    chats: Math.min(6, available),
+    panels: Math.max(0, Math.min(22, available - 6, Math.floor(available / 2))),
+  }
+}
+
 export function ChatSidebar(props: { width: number; onClose: () => void }) {
   const theme = useTheme()
+  const dimensions = useTerminalDimensions()
+  const layout = createMemo(() => sidebarLayout(dimensions().height))
   const data = useData()
   const route = useRoute()
   const tabs = useSessionTabs()
   const [query, setQuery] = createSignal("")
   const [hovered, setHovered] = createSignal<string>()
+  const [panelRows, setPanelRows] = createSignal(0)
   const background = () => theme.background.raised.base
   const hover = () => tint(background(), theme.background.raised.high, 0.9)
   const selected = () => theme.background.raised.high
   const current = () => (route.data.type === "session" ? route.data.sessionID : undefined)
-  const title = (sessionID: string, fallback: string | undefined) => data.session.get(sessionID)?.title || fallback || "New chat"
+  const title = (sessionID: string, fallback: string | undefined) =>
+    data.session.get(sessionID)?.title || fallback || "New chat"
   const chats = createMemo(() =>
     filterChats(
       tabs.tabs().map((tab) => ({ sessionID: tab.sessionID, title: title(tab.sessionID, tab.title) })),
@@ -118,24 +131,20 @@ export function ChatSidebar(props: { width: number; onClose: () => void }) {
       flexShrink={0}
       flexDirection="column"
       backgroundColor={background()}
-      paddingTop={1}
       paddingLeft={1}
       paddingRight={1}
     >
-      {/* Brand header: the DataForSEO mark, exactly as in the main logo, with the name on its middle row. */}
+      {/* Brand header: the small DataForSEO mark centred on the name's row, and the fold control. Each mark row is
+          one text line, so the mark is exactly 6 columns wide and never runs into the name. */}
       <box flexDirection="row" flexShrink={0} height={3} gap={2}>
-        <box flexDirection="column" flexShrink={0} width={MARK[0].length}>
-          <For each={markCells()}>
+        <box flexDirection="column" flexShrink={0} width={MARK_SMALL[0].length}>
+          <For each={markCells(MARK_SMALL)}>
             {(row) => (
-              <box flexDirection="row" height={1} width={MARK[0].length}>
+              <text wrapMode="none" selectable={false}>
                 <For each={row}>
-                  {(cell) => (
-                    <text fg={hex(cell.fg)} bg={hex(cell.bg)} selectable={false}>
-                      {cell.char}
-                    </text>
-                  )}
+                  {(cell) => <span style={{ fg: hex(cell.fg), bg: hex(cell.bg) }}>{cell.char}</span>}
                 </For>
-              </box>
+              </text>
             )}
           </For>
         </box>
@@ -150,21 +159,19 @@ export function ChatSidebar(props: { width: number; onClose: () => void }) {
           </text>
         </box>
       </box>
-      <box height={1} flexShrink={0} />
       <box
         id="chat-sidebar-new"
         flexShrink={0}
-        border={["top", "bottom", "left", "right"]}
-        borderStyle="rounded"
-        borderColor={theme.hue.interactive[200]}
+        height={1}
+        backgroundColor={theme.background.action.primary.base}
         paddingLeft={1}
         onMouseUp={() => tabs.add()}
       >
-        <text fg={theme.text.base} selectable={false}>
+        <text fg={theme.text.action.primary.base} selectable={false}>
           + New chat
         </text>
       </box>
-      <box flexDirection="row" flexShrink={0} paddingLeft={1} paddingTop={1} gap={1}>
+      <box flexDirection="row" flexShrink={0} height={1} paddingLeft={1} gap={1}>
         <text fg={theme.text.muted} flexShrink={0} selectable={false}>
           ⌕
         </text>
@@ -180,11 +187,14 @@ export function ChatSidebar(props: { width: number; onClose: () => void }) {
           onInput={(value: string) => setQuery(value)}
         />
       </box>
-      <box height={1} flexShrink={0} />
-      <text fg={theme.text.base} attributes={TextAttributes.BOLD} flexShrink={0} paddingLeft={1} selectable={false}>
-        Chats
-      </text>
-      <scrollbox flexGrow={1} minHeight={2} horizontalScrollbarOptions={{ visible: false }}>
+      <scrollbox
+        id="chat-sidebar-chats"
+        flexGrow={1}
+        flexShrink={1}
+        flexBasis={0}
+        minHeight={layout().chats}
+        horizontalScrollbarOptions={{ visible: false }}
+      >
         <For each={chats()}>{(chat) => <Row sessionID={chat.sessionID} title={chat.title} />}</For>
         <Show when={chats().length === 0 && earlier().length === 0}>
           <text fg={theme.text.muted} paddingLeft={2} selectable={false}>
@@ -201,15 +211,31 @@ export function ChatSidebar(props: { width: number; onClose: () => void }) {
       {/* The current chat's account, context and MCP panels, formerly the right sidebar. */}
       <Show when={current()} keyed>
         {(sessionID) => (
-          <box flexShrink={0} flexDirection="column">
+          <scrollbox
+            id="chat-sidebar-panels"
+            // As tall as its panels, up to the share of the sidebar it may take; beyond that it scrolls.
+            height={Math.min(layout().panels, panelRows() + 1)}
+            flexShrink={0}
+            horizontalScrollbarOptions={{ visible: false }}
+            contentOptions={{ flexShrink: 0 }}
+          >
             <text fg={tint(background(), theme.text.muted, 0.5)} wrapMode="none" selectable={false}>
               {"─".repeat(Math.max(1, props.width - 2))}
             </text>
-            {/* Pinned to the bottom; on a short screen it keeps its rows and the chats list scrolls instead. */}
-            <box flexShrink={0} gap={1} paddingLeft={1} paddingRight={1} paddingBottom={1}>
+            {/* Lower panels scroll independently, leaving space for the chat list. */}
+            <box
+              flexShrink={0}
+              gap={1}
+              paddingLeft={1}
+              paddingRight={1}
+              paddingBottom={1}
+              onSizeChange={function () {
+                setPanelRows(this.height)
+              }}
+            >
               <Slot path="sidebar.content" input={{ sessionID }} />
             </box>
-          </box>
+          </scrollbox>
         )}
       </Show>
     </box>

@@ -6,16 +6,23 @@ import { mkdir } from "node:fs/promises"
 import { createEventStream, createFetch, directory, json } from "./fixture/tui-client"
 import { tmpdir } from "./fixture/fixture"
 import { waitForHighlightedFrame } from "./fixture/frame"
-import { filterChats } from "../src/component/chat-sidebar"
+import { filterChats, sidebarLayout } from "../src/component/chat-sidebar"
 
 test("the chat search keeps matching titles, ignoring case", () => {
   const chats = [{ title: "US SEO keyword research" }, { title: "Potato keyword research" }, { title: "Greeting" }]
   expect(filterChats(chats, "")).toHaveLength(3)
-  expect(filterChats(chats, "  KEYWORD ").map((c) => c.title)).toEqual(["US SEO keyword research", "Potato keyword research"])
+  expect(filterChats(chats, "  KEYWORD ").map((c) => c.title)).toEqual([
+    "US SEO keyword research",
+    "Potato keyword research",
+  ])
   expect(filterChats(chats, "audit")).toEqual([])
 })
 
-async function open(width: number, height: number, inspect: (setup: Awaited<ReturnType<typeof createTestRenderer>>) => Promise<void>) {
+async function open(
+  width: number,
+  height: number,
+  inspect: (setup: Awaited<ReturnType<typeof createTestRenderer>>) => Promise<void>,
+) {
   await using state = await tmpdir()
   const setup = await createTestRenderer({ width, height, kittyKeyboard: true })
   await setup.renderer.setupTerminal()
@@ -35,7 +42,10 @@ async function open(width: number, height: number, inspect: (setup: Awaited<Retu
   await mkdir(`${state.path}/test/tui`, { recursive: true })
   await Bun.write(
     `${state.path}/test/tui/tabs.json`,
-    JSON.stringify({ global: { tabs: sessions.map((s) => ({ sessionID: s.id, title: s.title })), unread: {} }, cwd: {} }),
+    JSON.stringify({
+      global: { tabs: sessions.map((s) => ({ sessionID: s.id, title: s.title })), unread: {} },
+      cwd: {},
+    }),
   )
   const calls = createFetch((url) => {
     if (url.pathname === "/api/session") return json({ data: sessions, cursor: {} })
@@ -87,6 +97,15 @@ test("a wide terminal opens the chat sidebar on the left; « folds it and » bri
     expect(frame).toContain("New chat")
     expect(frame).toContain("Search chats")
     expect(frame).toContain("DataForSEO")
+    expect(frame).toContain("Account")
+    const sidebar = setup.renderer.root.findDescendantById("chat-sidebar")!
+    const first = setup.renderer.root.findDescendantById("chat-sidebar-chat-ses_kw")!
+    const newChat = setup.renderer.root.findDescendantById("chat-sidebar-new")!
+    const search = setup.renderer.root.findDescendantById("chat-sidebar-search")!
+    expect(first.y - sidebar.y).toBe(5)
+    expect(newChat.height).toBe(1)
+    expect(search.y).toBe(newChat.y + 1)
+    expect(frame.split("DataForSEO").length - 1).toBe(1)
     // The chats sit on the left, and the tab strip is gone: each title shows once, in the list.
     const potato = lines.find((line) => line.includes("Potato keyword research"))!
     expect(potato.indexOf("Potato keyword research")).toBeLessThan(42)
@@ -121,5 +140,25 @@ test("clicking a chat in the list switches to it", async () => {
     const row = lines.findIndex((line) => line.indexOf("Greeting") >= 0 && line.indexOf("Greeting") < 42)
     await setup.mockMouse.click(lines[row].indexOf("Greeting"), row)
     await waitForHighlightedFrame(setup, (frame) => frame.includes("Question in Greeting"))
+  })
+}, 20000)
+
+test("sidebar panels leave six chat rows when space allows", () => {
+  for (const height of [11, 16, 24, 45]) {
+    const layout = sidebarLayout(height)
+    expect(layout.chats).toBe(6)
+    expect(layout.panels + layout.chats + 5).toBeLessThanOrEqual(height)
+  }
+  expect(sidebarLayout(8)).toEqual({ chats: 3, panels: 0 })
+})
+
+test("a short terminal keeps the chat list usable and scrolls the lower panels", async () => {
+  await open(160, 20, async (setup) => {
+    const chats = setup.renderer.root.findDescendantById("chat-sidebar-chats")!
+    const panels = setup.renderer.root.findDescendantById("chat-sidebar-panels")!
+    expect(chats.height).toBeGreaterThanOrEqual(6)
+    expect(panels.height).toBeGreaterThan(0)
+    expect(panels.y + panels.height).toBeLessThanOrEqual(20)
+    expect(setup.captureCharFrame()).toContain("Greeting")
   })
 }, 20000)

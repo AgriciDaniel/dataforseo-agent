@@ -1,5 +1,7 @@
+import type { BoxRenderable } from "@opentui/core"
 import { Prompt, type PromptRef } from "../component/prompt"
 import { createEffect, createMemo, createSignal, onMount, Show, untrack } from "solid-js"
+import { HomeStarters, showHomeStarters } from "../feature-plugins/home/starters"
 import { HomeCrewStrip } from "../component/crew"
 import { HOME_ROWS } from "../ui/home-crew"
 import { Logo } from "../component/logo"
@@ -17,13 +19,18 @@ import { useTheme } from "../context/theme"
 
 let once = false
 const placeholder = {
-  normal: ["Top 10 Google results for \"best crm\" in the US", "Keyword ideas and search volume for my niche", "Which endpoint fits a backlink gap check, and what will it cost?"],
+  normal: [
+    'Top 10 Google results for "best crm" in the US',
+    "Keyword ideas and search volume for my niche",
+    "Which endpoint fits a backlink gap check, and what will it cost?",
+  ],
   shell: ["ls -la", "git status", "pwd"],
 }
 
 export function Home() {
   const route = useRouteData("home")
   const promptRef = usePromptRef()
+  const [promptHeight, setPromptHeight] = createSignal(0)
   const [ref, setRef] = createSignal<PromptRef | undefined>()
   const args = useArgs()
   const local = useLocal()
@@ -97,9 +104,31 @@ export function Home() {
           </text>
           <box height={1} flexShrink={0} />
         </Show>
-        <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1} flexShrink={0} position="relative">
+        <box
+          width="100%"
+          maxWidth={75}
+          zIndex={1000}
+          paddingTop={1}
+          flexShrink={0}
+          position="relative"
+          onSizeChange={function (this: BoxRenderable) {
+            setPromptHeight(this.height)
+          }}
+        >
           <Prompt ref={bind} placeholders={placeholder} disabled={forms().length > 0} />
         </box>
+        <Show when={showHomeStarters(dimensions().width, dimensions().height, promptHeight())}>
+          <HomeStarters
+            disabled={forms().length > 0}
+            onSelect={(text) => {
+              const composer = ref()
+              if (!composer) return
+              composer.setMode("normal")
+              composer.set({ text, files: [], agents: [], pasted: [] })
+              composer.focus()
+            }}
+          />
+        </Show>
         <box flexGrow={1} minHeight={0} />
       </box>
       {/* DataForSEO Agent: the crew wanders the floor above the footer; point at them or click one. */}

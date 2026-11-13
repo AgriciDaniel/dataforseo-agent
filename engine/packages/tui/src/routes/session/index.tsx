@@ -30,6 +30,7 @@ import {
   TextAttributes,
   RGBA,
   MouseEvent,
+  MouseButton,
 } from "@opentui/core"
 import { Prompt, type PromptRef } from "../../component/prompt"
 import {
@@ -67,6 +68,7 @@ import { DialogSelect } from "../../ui/dialog-select"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
 import { TodoItem } from "../../component/todo-item"
 import { ChartView } from "../../component/chart-view"
+import { useResults } from "../../context/results"
 import { chatAutoAllowed, isDataForSEOAction } from "../../util/chat-auto-allow"
 import type { Spec as ChartSpec } from "@dataforseo-agent/util/chart"
 import { DialogImagePreview } from "../../component/dialog-image-preview"
@@ -3479,6 +3481,9 @@ function ApplyPatch(props: ToolProps) {
 
 function Chart(props: ToolProps) {
   const ctx = use()
+  const theme = useTheme()
+  const renderer = useRenderer()
+  const results = useResults()
   const data = useData()
   const spec = createMemo(() => (props.metadata.spec ?? props.input) as ChartSpec)
   // Every drawn chart in this session, in order, for the HTML report.
@@ -3495,17 +3500,41 @@ function Chart(props: ToolProps) {
   return (
     <Switch>
       <Match when={props.part.state.status === "completed"}>
-        <BlockTool title={title()} part={props.part}>
-          <ChartView spec={{ ...spec(), title: undefined }} title={spec().title} width={ctx.width - 8} collect={sessionCharts} />
-        </BlockTool>
+        <Show
+          when={results?.sessionID() === ctx.sessionID && results.visible()}
+          fallback={
+            <BlockTool title={title()} part={props.part}>
+              <ChartView
+                spec={{ ...spec(), title: undefined }}
+                title={spec().title}
+                width={ctx.width - 8}
+                collect={sessionCharts}
+              />
+            </BlockTool>
+          }
+        >
+          <box
+            paddingLeft={3}
+            height={1}
+            flexDirection="row"
+            onMouseUp={(event) => {
+              if (event.button !== MouseButton.LEFT || renderer.getSelection()?.getSelectedText()) return
+              event.stopPropagation()
+              results?.select(props.part.id)
+            }}
+          >
+            <text fg={theme.text.action.secondary.base} wrapMode="none" minWidth={0} flexShrink={1}>
+              ▤ {spec().title ?? "Chart"}
+            </text>
+            <text fg={theme.text.muted} flexShrink={0}>
+              {" "}
+              shown in results
+            </text>
+          </box>
+        </Show>
       </Match>
       <Match when={true}>
-        <InlineTool
-          icon="▤"
-          pending="Drawing chart…"
-          complete={props.part.state.status === "error"}
-          part={props.part}
-        >
+        <InlineTool icon="▤" pending="Drawing chart…" complete={props.part.state.status === "error"} part={props.part}>
           {props.part.state.status === "error"
             ? `Chart not drawn: ${props.part.state.error.message.split("\n").slice(0, 3).join(" ").slice(0, 160)}`
             : "Chart not drawn"}

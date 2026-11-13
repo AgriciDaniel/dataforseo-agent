@@ -47,6 +47,7 @@ export function ChartView(props: {
   const toast = useToast()
   const [table, setTable] = createSignal(false)
   const [tip, setTip] = createSignal<string | undefined>()
+  const [hovered, setHovered] = createSignal(false)
   // Count-up on first appearance: bar lengths and headline numbers grow to their value over half a second.
   const animated = ["hbar", "grouped-bar", "diverging-bar", "kpi"].includes(props.spec.type)
   const [progress, setProgress] = createSignal(animated ? 0 : 1)
@@ -83,7 +84,7 @@ export function ChartView(props: {
     const errors = validate(active())
     if (errors.length) return undefined
     try {
-      return render(active(), Math.max(30, props.width))
+      return render(active(), Math.max(30, props.width), { full: props.full })
     } catch {
       return undefined
     }
@@ -134,7 +135,12 @@ export function ChartView(props: {
     const dir = path.join(process.cwd(), EXPORT_DIR)
     const file = path.join(dir, `report-${stamp()}.html`)
     void mkdir(dir, { recursive: true })
-      .then(() => writeFile(file, report(charts, { title: charts[0]?.title ? `DataForSEO report: ${charts[0].title}` : undefined })))
+      .then(() =>
+        writeFile(
+          file,
+          report(charts, { title: charts[0]?.title ? `DataForSEO report: ${charts[0].title}` : undefined }),
+        ),
+      )
       .then(() =>
         toast.show({
           message: `Saved ${path.relative(process.cwd(), file)} (${charts.length} chart${charts.length === 1 ? "" : "s"})`,
@@ -200,20 +206,33 @@ export function ChartView(props: {
     }
   }
 
+  const separator = () => (props.width < 38 ? "·" : " · ")
   const hint = tint(theme.background.base, theme.text.muted, 0.6)
-  const Button = (p: { label: string; run: () => void }) => (
-    <text
-      fg={theme.text.feedback.info.base}
-      wrapMode="none"
-      flexShrink={0}
-      onMouseUp={(e: { stopPropagation(): void }) => clicked(e) && p.run()}
-    >
-      {`[${p.label}]`}
-    </text>
-  )
+  const Button = (p: { label: string; run: () => void }) => {
+    const [active, setActive] = createSignal(false)
+    return (
+      <text
+        fg={active() ? theme.text.action.secondary.hovered : theme.text.muted}
+        wrapMode="none"
+        flexShrink={0}
+        onMouseOver={() => setActive(true)}
+        onMouseOut={() => setActive(false)}
+        onMouseUp={(e: { stopPropagation(): void }) => clicked(e) && p.run()}
+      >
+        {p.label}
+      </text>
+    )
+  }
 
   return (
-    <box flexDirection="column">
+    <box
+      flexDirection="column"
+      onMouseOver={() => setHovered(true)}
+      onMouseOut={() => {
+        setHovered(false)
+        setTip(undefined)
+      }}
+    >
       <Show when={lines()} fallback={<text fg={theme.text.muted}>Chart could not be drawn.</text>}>
         {(rows) => (
           <For each={rows()}>
@@ -251,12 +270,7 @@ export function ChartView(props: {
           </For>
         )}
       </Show>
-      <Show when={hasTips()}>
-        <text fg={tip() ? theme.text.base : hint} wrapMode="none">
-          {tip() ?? "point at a letter, tile or marker to see its keyword and numbers"}
-        </text>
-      </Show>
-      <box flexDirection="row" flexWrap="wrap" columnGap={1} height="auto">
+      <box flexDirection="row" height={1} overflow="hidden">
         <Show when={tableSpec()}>
           <Button
             label={table() ? "chart" : "table"}
@@ -265,18 +279,35 @@ export function ChartView(props: {
               setTable(!table())
             }}
           />
+          <text fg={hint} flexShrink={0}>
+            {separator()}
+          </text>
         </Show>
-        <Button label="copy CSV" run={copyCsv} />
-        <Button label="save CSV" run={saveCsv} />
-        <Button label="save report" run={saveReport} />
+        <Button label="copy" run={copyCsv} />
+        <text fg={hint} flexShrink={0}>
+          {separator()}
+        </text>
+        <Button label="save" run={saveCsv} />
+        <text fg={hint} flexShrink={0}>
+          {separator()}
+        </text>
+        <Button label="report" run={saveReport} />
         <Show when={!props.full}>
-          <Button label="full screen" run={openFull} />
+          <text fg={hint} flexShrink={0}>
+            {separator()}
+          </text>
+          <Button label="expand" run={openFull} />
         </Show>
         <Show when={isTable()}>
           <text fg={hint} wrapMode="none" flexShrink={0}>
             {sort()
-              ? `sorted by ${columnName(sort()!.column)} ${sort()!.dir === "asc" ? "↑" : "↓"}`
-              : "click a header to sort"}
+              ? ` · ${columnName(sort()!.column)} ${sort()!.dir === "asc" ? "↑" : "↓"}`
+              : " · click header to sort"}
+          </text>
+        </Show>
+        <Show when={hasTips() && hovered()}>
+          <text fg={hint} wrapMode="none" flexShrink={1}>
+            {` · ${tip() ?? "hover for details"}`}
           </text>
         </Show>
       </box>

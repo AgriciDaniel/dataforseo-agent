@@ -281,6 +281,10 @@ export function niceAxis(lo: number, hi: number): { lo: number; hi: number; mid:
   return { lo: a, hi: b, mid: a + step * Math.round((b - a) / step / 2), step }
 }
 
+function axisTicks(lo: number, hi: number, step: number) {
+  return Array.from({ length: Math.round((hi - lo) / step) + 1 }, (_, i) => Number((lo + i * step).toPrecision(12)))
+}
+
 const EIGHTHS = ["", "▏", "▎", "▍", "▌", "▋", "▊", "▉"]
 function bar(value: number, max: number, cells: number): string {
   if (max <= 0 || value <= 0 || cells <= 0) return ""
@@ -540,28 +544,52 @@ function renderTable(spec: Spec, cols: number): Line[] {
 function renderKpi(spec: Spec, cols: number): Line[] {
   const tiles = (spec.series ?? []).map((s) => {
     const cur = s.values[0] as number
-    const prev = num(s.values[1]) ? (s.values[1] as number) : undefined
+    const prev = num(s.values[1]) ? s.values[1] : undefined
     const delta = prev !== undefined && prev !== 0 ? ((cur - prev) / Math.abs(prev)) * 100 : undefined
-    return { name: s.name, value: formatNumber(cur, spec.unit), delta, prev, inverse: s.lower_is_better === true }
+    const up = cur >= (prev ?? cur)
+    const change =
+      delta === undefined
+        ? prev === undefined
+          ? ""
+          : cur === prev
+            ? "no change"
+            : `${up ? "▲" : "▼"} ${formatNumber(Math.abs(cur - prev), spec.unit)}`
+        : `${up ? "▲" : "▼"} ${Math.abs(delta).toFixed(1)}%`
+    return {
+      name: s.name,
+      value: formatNumber(cur, spec.unit),
+      previous: prev === undefined ? "" : `was ${formatNumber(prev, spec.unit)}`,
+      change,
+      role: cur === prev ? "muted" : up !== (s.lower_is_better === true) ? "good" : "bad",
+    } as const
   })
-  const tileWidth = Math.max(14, ...tiles.map((t) => Math.max([...t.name].length, [...t.value].length) + 2))
-  const perRow = Math.max(1, Math.floor((cols + 2) / (tileWidth + 2)))
-  const out: Line[] = [...header(spec, cols)]
+  const tileWidth = Math.min(
+    cols,
+    Math.max(18, ...tiles.flatMap((t) => [t.name, t.value, t.previous, t.change].map((v) => [...v].length + 4))),
+  )
+  const fit = Math.max(1, Math.floor((cols + 2) / (tileWidth + 2)))
+  // Balance the rows: 4 cards that do not fit on one row go 2 and 2, not 3 and 1.
+  const perRow = Math.ceil(tiles.length / Math.ceil(tiles.length / fit))
+  const out: Line[] = []
   for (let i = 0; i < tiles.length; i += perRow) {
+    if (i) out.push([])
     const row = tiles.slice(i, i + perRow)
-    out.push(row.flatMap((t) => [seg(pad(cut(t.name, tileWidth), tileWidth + 2), "muted")]))
-    out.push(row.flatMap((t) => [seg(pad(t.value, tileWidth + 2), "title", true)]))
-    out.push(
-      row.flatMap((t) => {
-        if (t.delta === undefined) return [seg(pad("", tileWidth + 2), "none")]
-        const up = t.delta >= 0
-        const text = `${up ? "▲" : "▼"} ${Math.abs(t.delta).toFixed(1)}%`
-        return [seg(pad(text, tileWidth + 2), up !== t.inverse ? "good" : "bad")]
-      }),
-    )
-    out.push([])
+    const content = (text: string, role: Role, bold = false): Line => [
+      seg("│ ", "axis"),
+      seg(pad(cut(text, tileWidth - 4), tileWidth - 4), role, bold),
+      seg(" │", "axis"),
+    ]
+    const cards = row.map((t): Line[] => [
+      [seg("┌" + "─".repeat(tileWidth - 2) + "┐", "axis")],
+      content(t.name, "muted"),
+      content(t.value, "title", true),
+      content(t.change, t.role),
+      content(t.previous, "muted"),
+      [seg("└" + "─".repeat(tileWidth - 2) + "┘", "axis")],
+    ])
+    for (let r = 0; r < 6; r++) out.push(cards.flatMap((card, k) => [...(k ? [seg("  ", "none")] : []), ...card[r]]))
   }
-  return [...out.slice(0, -1), ...footer(spec, cols)]
+  return out
 }
 
 function renderHbar(spec: Spec, cols: number, grouped: boolean): Line[] {
@@ -586,7 +614,8 @@ function renderHbar(spec: Spec, cols: number, grouped: boolean): Line[] {
   const max = Math.max(0, ...values.map(scaled))
   const labelWidth = Math.min(Math.max(...x.map((l) => [...l].length), 4), Math.floor(cols * 0.35))
   const valueWidth = Math.max(...shown.flatMap((s) => s.values.map((v) => valueText(v).length)), 3)
-  const cells = Math.max(4, cols - labelWidth - valueWidth - 3)
+  const seriesWidth = grouped ? Math.min(Math.max(...shown.map((s) => [...s.name].length)), Math.floor(cols * 0.2)) : 0
+  const cells = Math.max(4, cols - labelWidth - valueWidth - 3 - (grouped ? seriesWidth + 1 : 0))
   const out: Line[] = [...header(spec, cols)]
   x.forEach((label, r) => {
     shown.forEach((s, k) => {
@@ -595,12 +624,13 @@ function renderHbar(spec: Spec, cols: number, grouped: boolean): Line[] {
       const tip = `${label}${grouped ? `, ${s.name}` : ""}: ${rank ? valueText(v) : num(v) ? v.toLocaleString("en-US") + (spec.unit ? ` ${spec.unit}` : "") : "n/a"}`
       out.push([
         { ...seg(pad(k === 0 ? cut(label, labelWidth) : "", labelWidth), "text"), tip },
+        ...(grouped ? [seg(" " + pad(cut(s.name, seriesWidth), seriesWidth), k)] : []),
         seg(" │", "axis"),
         { ...seg(bar(scaled(value), max, cells), grouped ? k : 0), tip },
         seg(" " + valueText(v), "muted"),
       ])
     })
-    if (grouped && r < x.length - 1) out.push([seg(pad("", labelWidth) + " │", "axis")])
+    if (grouped && r < x.length - 1) out.push([])
   })
   const note: Line[] = logScale
     ? [
@@ -618,7 +648,7 @@ function renderHbar(spec: Spec, cols: number, grouped: boolean): Line[] {
     : rank
       ? [[], [seg(cut("longer bar = better rank (#1 is best)", cols), "muted")]]
       : []
-  return [...out, ...footer(spec, cols, [...note, ...(grouped ? [[], ...legend(series, cols)] : [])])]
+  return [...out, ...footer(spec, cols, note)]
 }
 
 function renderShare(spec: Spec, cols: number): Line[] {
@@ -629,7 +659,7 @@ function renderShare(spec: Spec, cols: number): Line[] {
   const values = order0.map((i) => raw0[i])
   const total = values.reduce((a, b) => a + b, 0)
   const out: Line[] = [...header(spec, cols)]
-  if (total <= 0) return [...out, [seg("No data", "muted")]]
+  if (total <= 0) return [...out, [seg("No data", "muted")], ...footer(spec, cols)]
   const cells = Math.max(10, cols)
   // Largest remainder so the parts add up to the full width; every non-zero part gets at least one cell.
   const raw = values.map((v) => (v / total) * cells)
@@ -648,36 +678,23 @@ function renderShare(spec: Spec, cols: number): Line[] {
     alloc[i]--
     left++
   }
-  const strip: Line = alloc.map((n, i) => seg("█".repeat(n), i))
   out.push(
-    strip,
-    strip.map((s) => ({ ...s })),
+    alloc.map((n, i) => ({ ...seg("█".repeat(n), i), tip: `${x[i]}: ${formatNumber(values[i], spec.unit)}` })),
+    [],
   )
-  out.push([])
-  // One row per part, largest first: name, its own bar on the same scale (so small parts stay visible),
-  // share and value. The strip above shows the whole; these rows make each part readable.
-  // Values given as percents are shown as given (they may cover only part of the whole).
-  const pctText = (v: number) => (spec.unit === "%" ? formatNumber(v, "%") : percentText(v, total))
-  // Values already given as percents would only repeat the share.
-  const tail = values.map((v) => (spec.unit === "%" ? "" : `  ${formatNumber(v, spec.unit)}`))
-  const tailW = 7 + Math.max(0, ...tail.map((t) => t.length))
-  const labelW = Math.max(
-    4,
-    Math.min(Math.max(...x.map((l) => [...l].length), 4), Math.floor(cols * 0.35), cols - 3 - tailW - 4),
-  )
-  const barW = Math.max(1, cols - labelW - 3 - tailW)
-  const max = Math.max(...values)
-  x.forEach((label, i) => {
-    const n = values[i] > 0 ? Math.max(1, Math.round((values[i] / max) * barW)) : 0
+  const shares = values.map((v) => (spec.unit === "%" ? formatNumber(v, "%") : percentText(v, total)))
+  const shareWidth = Math.max(...shares.map((v) => v.length))
+  const counts = values.map((v) => (spec.unit === "%" ? "" : formatNumber(v, spec.unit)))
+  const countWidth = Math.max(...counts.map((v) => v.length))
+  const labelWidth = Math.max(1, Math.min(Math.max(...x.map((v) => [...v].length)), cols - shareWidth - countWidth - 7))
+  x.forEach((label, i) =>
     out.push([
       seg("■ ", i),
-      seg(pad(cut(label, labelW), labelW) + " ", "text"),
-      seg("█".repeat(n), i),
-      seg(" ".repeat(barW - n), "none"),
-      seg(pad(pctText(values[i]), 7, true), "text", true),
-      seg(cut(tail[i], Math.max(0, cols - labelW - 3 - barW - 7)), "muted"),
-    ])
-  })
+      seg(pad(cut(label, labelWidth), labelWidth) + "  ", "text"),
+      seg(pad(shares[i], shareWidth, true), "text", true),
+      ...(spec.unit === "%" ? [] : [seg("  " + pad(counts[i], countWidth, true), "muted")]),
+    ]),
+  )
   return [...out, ...footer(spec, cols)]
 }
 
@@ -689,44 +706,44 @@ function renderDiverging(spec: Spec, cols: number): Line[] {
   const max = niceAxis(0, Math.max(1, ...p, ...n)).hi
   const half = 5
   const axisWidth = Math.max(formatNumber(max).length + 1, 3)
-  const avail = cols - axisWidth - 2
+  // A handful of dates must not turn into slabs: a column is at most 9 cells wide.
+  const avail = Math.min(cols - axisWidth - 2, Math.max(1, x.length) * 9)
   const step = Math.max(1, Math.ceil(x.length / avail))
   const buckets: { p: number; n: number }[] = []
   for (let i = 0; i < x.length; i += step) {
     buckets.push({ p: Math.max(...p.slice(i, i + step)), n: Math.max(...n.slice(i, i + step)) })
   }
-  // Up to 6 columns a bar with a one column gap, so each month reads as its own bar.
-  const colWidth = Math.max(1, Math.min(6, Math.floor(avail / buckets.length)))
-  const barWidth = colWidth >= 3 ? colWidth - 1 : colWidth
-  const gap = " ".repeat(colWidth - barWidth)
+  const colWidths = buckets.map((_, i) => Math.floor(avail / buckets.length) + (i < avail % buckets.length ? 1 : 0))
+  const gap = Math.min(...colWidths) >= 3 ? 1 : 0
+  const barWidths = colWidths.map((w) => w - gap)
   const out: Line[] = [...header(spec, cols)]
   const UP = " ▁▂▃▄▅▆▇█"
   const DOWN = " ▔▔▀▀▀▀██"
   for (let row = half; row >= 1; row--) {
     const line: Line = [seg(pad(row === half ? formatNumber(max) : "", axisWidth, true) + " │", "axis")]
-    buckets.forEach((b) => {
+    buckets.forEach((b, i) => {
       const h = (b.p / max) * half
       const fill = h >= row ? 8 : h > row - 1 ? Math.round((h - (row - 1)) * 8) : 0
-      line.push(seg(UP[fill].repeat(barWidth), "good"), seg(gap, "none"))
+      line.push(seg(UP[fill].repeat(barWidths[i]), "good"), seg(" ".repeat(colWidths[i] - barWidths[i]), "none"))
     })
     out.push(line)
   }
-  out.push([seg(pad("0", axisWidth, true) + " ┼", "axis"), seg("─".repeat(buckets.length * colWidth), "axis")])
+  out.push([seg(pad("0", axisWidth, true) + " ┼", "axis"), seg("─".repeat(avail), "axis")])
   for (let row = 1; row <= half; row++) {
     const line: Line = [seg(pad(row === half ? "-" + formatNumber(max) : "", axisWidth, true) + " │", "axis")]
-    buckets.forEach((b) => {
+    buckets.forEach((b, i) => {
       const h = (b.n / max) * half
       const fill = h >= row ? 8 : h > row - 1 ? Math.round((h - (row - 1)) * 8) : 0
-      line.push(seg(DOWN[fill].repeat(barWidth), "bad"), seg(gap, "none"))
+      line.push(seg(DOWN[fill].repeat(barWidths[i]), "bad"), seg(" ".repeat(colWidths[i] - barWidths[i]), "none"))
     })
     out.push(line)
   }
   out.push(
     spreadLabels(
       buckets.map((_, b) => x[b * step]),
-      buckets.map((_, b) => b * colWidth + (barWidth - 1) / 2),
+      buckets.map((_, b) => colWidths.slice(0, b).reduce((a, v) => a + v, 0) + (barWidths[b] - 1) / 2),
       axisWidth + 2,
-      Math.min(buckets.length * colWidth, cols - axisWidth - 2),
+      avail,
     ),
   )
   const sum = (a: number[]) => a.reduce((s, v) => s + v, 0)
@@ -891,10 +908,15 @@ function plotFrame(
   draw(canvas, toX, toY, plotW)
   const out: Line[] = [...header(spec, cols)]
   // Each tick label sits on the row its value falls in.
-  const tickRows = new Map(ticks.map((t) => [Math.max(0, Math.min(height - 1, Math.floor(toY(t) / 4))), yFormat(t)]))
+  const tickRows = new Map(
+    ticks.map((t) => {
+      const at = (t - yMin) / (yMax - yMin || 1)
+      return [Math.round((invert ? at : 1 - at) * (height - 1)), yFormat(t)]
+    }),
+  )
   for (let r = 0; r < height; r++) {
     const label = tickRows.get(r) ?? ""
-    out.push([seg(pad(label, axisWidth, true) + " ┤", "axis"), ...canvas.row(r)])
+    out.push([seg(pad(label, axisWidth, true) + (tickRows.has(r) ? " ┤" : " │"), "axis"), ...canvas.row(r)])
   }
   out.push([seg(" ".repeat(axisWidth) + " └", "axis"), seg("─".repeat(plotW), "axis")])
   out.push(xLabels)
@@ -905,6 +927,7 @@ function renderLine(spec: Spec, cols: number): Line[] {
   const x = spec.x ?? []
   const series = spec.series ?? []
   const raw = series.flatMap((s) => s.values.filter(num) as number[])
+  if (!raw.length) return [[seg("No data", "muted")]]
   const rank = series.length > 0 && isRank(spec, series)
   // Log scale: on request, or automatically when every value is positive and they span 1000x or more.
   const logScale =
@@ -919,26 +942,25 @@ function renderLine(spec: Spec, cols: number): Line[] {
   let yMax = Math.max(...values)
   let ticks: number[]
   if (logScale) {
-    if (yMin === yMax) {
-      yMin -= 1
-      yMax += 1
-    }
-    ticks = [yMin, (yMin + yMax) / 2, yMax]
+    yMin = Math.floor(yMin)
+    yMax = Math.max(yMin + 1, Math.ceil(yMax))
+    ticks = axisTicks(yMin, yMax, 1)
   } else if (rank) {
     // Ranks run from #1 at the top down to a round worst position.
     const axis = niceAxis(0, Math.max(2, yMax))
     yMin = 1
     yMax = axis.hi
-    ticks = [1, axis.mid, axis.hi]
+    ticks = [1, ...axisTicks(axis.step, axis.hi, axis.step).filter((v) => v > 1)]
   } else {
     const axis = niceAxis(yMin, yMax)
     yMin = Math.min(...values) >= 0 ? Math.max(0, axis.lo) : axis.lo
     yMax = axis.hi
-    ticks = [yMin, axis.mid, yMax]
+    ticks = axisTicks(yMin, yMax, axis.step)
   }
-  const height = 10
+  const height = Math.max(10, (ticks.length - 1) * 3 + 1)
   const axisLabel = (v: number) => (rank ? rankText(v) : formatNumber(logScale ? 10 ** v : v))
   const axisWidth = Math.max(...ticks.map((t) => axisLabel(t).length))
+  cols = Math.min(cols, Math.max(32, x.length * 4 + axisWidth + 2))
   const plotW = Math.max(10, cols - axisWidth - 2)
   const lines = plotFrame(
     spec,
@@ -1045,11 +1067,11 @@ function renderScatter(spec: Spec, cols: number): Line[] {
     if (log) {
       const a = Math.floor(lo + 1e-9)
       const b = Math.max(a + 1, Math.ceil(hi - 1e-9))
-      return { lo: a, hi: b, ticks: b - a >= 2 && (b - a) % 2 === 0 ? [a, (a + b) / 2, b] : [a, b] }
+      return { lo: a, hi: b, ticks: axisTicks(a, b, 1) }
     }
     const axis = niceAxis(lo, hi)
     const a = lo >= 0 ? Math.max(0, axis.lo) : axis.lo
-    return { lo: a, hi: axis.hi, ticks: [a, axis.mid, axis.hi] }
+    return { lo: a, hi: axis.hi, ticks: axisTicks(a, axis.hi, axis.step) }
   }
   const bx = bounds(xs.map(fx), logX)
   const by = bounds(ys.map(fy), logY)
@@ -1081,7 +1103,7 @@ function renderScatter(spec: Spec, cols: number): Line[] {
     cols,
     yMin,
     yMax,
-    14,
+    Math.max(13, (by.ticks.length - 1) * 3 + 1),
     (canvas, toX, toY) => {
       series.forEach((s, k) =>
         (s.values as readonly [number, number][]).forEach(([vx, vy], i) => {
@@ -1118,11 +1140,10 @@ function renderScatter(spec: Spec, cols: number): Line[] {
     }
   }
   const names: Line[] = [
-    ...(spec.x_label ? [[seg(cut(`x: ${tag(spec.x_label, logX)}`, cols), "muted")] as Line] : []),
-    ...(spec.y_label ? [[seg(cut(`y: ${tag(spec.y_label, logY)}`, cols), "muted")] as Line] : []),
+    ...(spec.y_label ? [[seg(cut(`↑ ${tag(spec.y_label, logY)}`, cols), "muted")] as Line] : []),
+    ...(spec.x_label ? [[seg(cut(`${tag(spec.x_label, logX)} →`, cols), "muted")] as Line] : []),
   ]
   const stacked = lines.slice(0, -1).some((l) => l.some((sg) => sg.tip !== undefined && /^[2-9+]$/.test(sg.text)))
-  const yName: Line[] = stacked ? [...names, [seg("2 to 9: points sharing a spot, + more", "muted")]] : names
   const tiers: Line[] = kdAxis
     ? wrap(
         [[seg("KD ", "muted")], ...KD_TIERS.map((tier) => [seg("■ ", tier.role), seg(`${tier.label}  `, "muted")])],
@@ -1153,8 +1174,11 @@ function renderScatter(spec: Spec, cols: number): Line[] {
       keyItems.slice(i, i + perRow).flatMap((item) => [...item, seg(" ".repeat(keyWidth - width(item)), "none")]),
     )
   return [
+    ...names,
+    ...(names.length ? [[]] : []),
     ...lines,
-    ...yName,
+    [],
+    ...(stacked ? [[seg("2 to 9: points sharing a spot, + more", "muted")]] : []),
     ...tiers,
     ...(key.length ? [[], ...key.map((l) => trimLine(l, cols))] : []),
     ...(kdAxis ? [] : legend(series, cols)),
@@ -1170,7 +1194,13 @@ function renderHeatmap(spec: Spec, cols: number): Line[] {
   const min = Math.min(...nums)
   const max = Math.max(...nums)
   const labelWidth = Math.min(Math.max(...rows.map((r) => [...r].length), 2), 12)
-  const cell = Math.max(3, Math.min(6, Math.floor((cols - labelWidth - 1) / Math.max(1, colsLabels.length))))
+  const cells = colsLabels.map((label, j) =>
+    Math.max(6, [...label].length + 2, ...values.map((row) => formatNumber(row[j]).length + 2)),
+  )
+  const available = cols - labelWidth - colsLabels.length - 3
+  while (cells.reduce((a, b) => a + b, 0) > available && Math.max(...cells) > 3) {
+    cells[cells.indexOf(Math.max(...cells))]--
+  }
   const level = (v: number) => {
     const t = max === min ? 0.5 : (v - min) / (max - min)
     const good = spec.lower_is_better ? 1 - t : t
@@ -1178,16 +1208,26 @@ function renderHeatmap(spec: Spec, cols: number): Line[] {
   }
   const out: Line[] = [...header(spec, cols)]
   out.push([
-    seg(pad("", labelWidth + 1), "none"),
-    ...colsLabels.map((c) => seg(pad(cut(c, cell - 1), cell, true), "muted")),
+    seg(pad("", labelWidth + 2), "none"),
+    ...colsLabels.flatMap((c, j) => [seg(center_(cut(c, cells[j]), cells[j]), "muted"), seg(" ", "none")]),
   ])
   rows.forEach((r, i) => {
     out.push([
-      seg(pad(cut(r, labelWidth), labelWidth) + " ", "muted"),
-      ...colsLabels.map((_, j) => {
+      seg(pad(cut(r, labelWidth), labelWidth) + " │", "muted"),
+      ...colsLabels.flatMap((label, j): Segment[] => {
         const v = values[i]?.[j]
-        return num(v) ? seg(pad(formatNumber(v), cell, true), level(v), true) : seg(pad("·", cell, true), "muted")
+        return [
+          {
+            text: center_(cut(num(v) ? formatNumber(v) : "·", cells[j] - 2), cells[j]),
+            role: num(v) ? "tile" : "muted",
+            bg: num(v) ? level(v) : undefined,
+            bold: true,
+            tip: `${r}, ${label}: ${formatNumber(v, spec.unit)}`,
+          },
+          seg(" ", "none"),
+        ]
       }),
+      seg("│", "axis"),
     ])
   })
   out.push([])
@@ -1237,7 +1277,7 @@ function renderDistribution(spec: Spec, cols: number): Line[] {
   const series = spec.series ?? []
   const labelWidth = Math.min(Math.max(...series.map((s) => [...s.name].length), 4), Math.floor(cols * 0.3))
   const totals = series.map((s) => s.values.reduce<number>((a, v) => a + (num(v) ? v : 0), 0))
-  const tail = totals.map((t) => ` ${formatNumber(t)}`)
+  const tail = totals.map((t) => (t > 0 ? ` 100% · ${formatNumber(t)}` : " no data"))
   const tailWidth = Math.max(...tail.map((t) => t.length))
   const cells = Math.max(10, cols - labelWidth - 2 - tailWidth)
   const out: Line[] = [...header(spec, cols)]
@@ -1264,24 +1304,62 @@ function renderDistribution(spec: Spec, cols: number): Line[] {
     }
     out.push([
       seg(pad(cut(s.name, labelWidth), labelWidth) + " │", "text"),
-      ...alloc.map((n, i) => ({
-        ...seg("█".repeat(n), bucketRole(i, x.length)),
-        tip: `${s.name}, ${x[i]}: ${formatNumber(values[i])} (${percentText(values[i], total)})`,
-      })),
+      ...alloc.flatMap((n, i): Segment[] => {
+        const pct = percentText(values[i], total)
+        const role = bucketRole(i, x.length)
+        const tip = `${s.name}, ${x[i]}: ${formatNumber(values[i])} (${pct})`
+        const left = Math.floor((n - pct.length) / 2)
+        return n >= pct.length + 2
+          ? [
+              { ...seg("█".repeat(left), role), tip },
+              { text: pct, role: "tile", bg: role, bold: true, tip },
+              { ...seg("█".repeat(n - pct.length - left), role), tip },
+            ]
+          : [{ ...seg("█".repeat(n), role), tip }]
+      }),
       seg(tail[k], "muted"),
     ])
   })
   out.push([])
-  // The key doubles as the counts: one entry per bucket with each row's count.
-  const items: Line[] = x.map((label, i) => [
-    seg("■ ", bucketRole(i, x.length)),
-    seg(
-      `${label} ${series.map((s) => formatNumber(num(s.values[i]) ? (s.values[i] as number) : 0)).join(" / ")}   `,
-      "muted",
-    ),
-  ])
-  out.push(...wrap(items, cols))
-  if (series.length > 1) out.push([seg(cut(`counts: ${series.map((s) => s.name).join(" / ")}`, cols), "muted")])
+  const bucketWidth = Math.min(Math.max(6, ...x.map((v) => [...v].length)), Math.floor(cols * 0.3))
+  const countWidths = series.map((s) =>
+    Math.min(20, Math.max(6, [...s.name].length, ...s.values.map((v) => formatNumber(num(v) ? v : 0).length))),
+  )
+  // Split wide count tables into panels so every series keeps its counts at narrow widths.
+  for (let start = 0; start < series.length; ) {
+    let end = start
+    let used = bucketWidth + 2
+    while (end < series.length && (end === start || used + countWidths[end] + 2 <= cols)) {
+      used += countWidths[end] + 2
+      end++
+    }
+    if (start) out.push([])
+    out.push([
+      seg(pad("Counts", bucketWidth + 2), "muted"),
+      ...series
+        .slice(start, end)
+        .flatMap((s, j) => [
+          {
+            ...seg(pad(cut(s.name, countWidths[start + j]), countWidths[start + j], true), "muted", true),
+            tip: s.name,
+          },
+          seg("  ", "none"),
+        ]),
+    ])
+    x.forEach((label, i) =>
+      out.push([
+        seg("■ ", bucketRole(i, x.length)),
+        seg(pad(cut(label, bucketWidth), bucketWidth), "muted"),
+        ...series
+          .slice(start, end)
+          .flatMap((s, j) => [
+            seg(pad(formatNumber(num(s.values[i]) ? s.values[i] : 0), countWidths[start + j], true), "text"),
+            seg("  ", "none"),
+          ]),
+      ]),
+    )
+    start = end
+  }
   return [...out, ...footer(spec, cols)]
 }
 
@@ -1415,11 +1493,44 @@ function renderGauge(spec: Spec, cols: number): Line[] {
   return [...out, ...footer(spec, cols)]
 }
 
-/** Draw a validated spec at the given width. Throws if the spec is invalid. */
-export function render(spec: Spec, cols = 100): Line[] {
+export const PLOT_WIDTH = 78
+
+/** Draw a validated spec. Inline charts stay composed; full screen can use the supplied width. */
+export function render(spec: Spec, cols = 100, options: { full?: boolean } = {}): Line[] {
   const errors = validate(spec)
   if (errors.length) throw new Error(errors.join(" "))
-  const w = Math.max(30, cols)
+  const w = Math.max(30, spec.type === "table" || options.full ? cols : Math.min(cols, PLOT_WIDTH))
+  const body = renderBody({ ...spec, title: undefined, subtitle: undefined, source: undefined }, w)
+  const axes: Line[] =
+    spec.type === "scatter"
+      ? []
+      : [
+          ...(spec.y_label ? [[seg(cut(`↑ ${spec.y_label}`, w), "muted")]] : []),
+          ...(spec.x_label ? [[seg(cut(`${spec.x_label} →`, w), "muted")]] : []),
+        ]
+  const lines = [
+    ...header(spec, w),
+    ...axes,
+    ...(axes.length ? [[]] : []),
+    ...body,
+    ...(spec.source ? [[], ...footer(spec, w)] : []),
+  ].map((line) => {
+    const out = trimLine(line, w)
+    while (out.length) {
+      const last = out[out.length - 1]
+      const text = last.text.trimEnd()
+      if (text) {
+        out[out.length - 1] = { ...last, text }
+        break
+      }
+      out.pop()
+    }
+    return out
+  })
+  return lines.filter((line, i) => line.length || (i > 0 && i < lines.length - 1 && lines[i - 1].length > 0))
+}
+
+function renderBody(spec: Spec, w: number): Line[] {
   switch (spec.type) {
     case "table":
       return renderTable(spec, w)

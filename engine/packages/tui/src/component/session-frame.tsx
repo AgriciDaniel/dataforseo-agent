@@ -13,17 +13,21 @@ import { useSessionTerminals } from "../context/session-terminals"
 import { usePromptRef } from "../context/prompt"
 import { usePanel } from "../context/panel"
 import { useStorage } from "../context/storage"
+import { useData } from "../context/data"
+import { createResultsState, ResultsProvider, type ResultChart } from "../context/results"
 import { useDialog } from "../ui/dialog"
 import { Session } from "../routes/session"
-import { clampSessionPaneWidth } from "../ui/layout"
+import { clampResultsPaneWidth, clampSessionPaneWidth, showResultsPane } from "../ui/layout"
 import { createPaneResize } from "../ui/pane-resize"
 import { PaneResizeHandle } from "../ui/pane-resize-handle"
 import { useToast } from "../ui/toast"
 import { TerminalPane } from "./terminal-pane"
 import { PanelHost } from "./panel-host"
+import { ResultsPane } from "./results-pane"
 
 export function SessionFrame(props: { sessionID: string; verticalTabsWidth: number }) {
   const sessions = useSessionTerminals()
+  const data = useData()
   const prompt = usePromptRef()
   const toast = useToast()
   const terminalError = () => toast.show({ variant: "error", message: "Unable to load terminal" })
@@ -33,32 +37,12 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
   const dialog = useDialog()
   const availableWidth = () => Math.max(0, dimensions().width - props.verticalTabsWidth)
   const defaultPaneWidth = () => Math.max(1, Math.floor(panels.width() / 2))
-  const [layout, updateLayout] = useStorage().store<{ paneWidth?: number; terminalWidth?: number }>("layout", {
-    initial: {},
-  })
-  const paneResize = createPaneResize({
-    value: () => layout.paneWidth ?? layout.terminalWidth ?? defaultPaneWidth(),
-    defaultValue: defaultPaneWidth,
-    clamp: (width) => clampSessionPaneWidth(width, panels.width()),
-    fromMouse: (event) => dimensions().width - event.x - 1,
-    contains: (event, width) => event.x >= dimensions().width - width - 1 && event.x <= dimensions().width - width,
-    onCommit: (width) => {
-      void updateLayout((draft) => {
-        draft.paneWidth = width
-      }).catch((error) => console.error("Failed to persist TUI layout", error))
-    },
-  })
-  let resizeRelease = false
-  const finishPaneResize = (event: MouseEvent) => {
-    if (paneResize.resizing()) {
-      // A captured drag-end can be followed by mouse-up on the focus overlay.
-      resizeRelease = true
-      queueMicrotask(() => {
-        resizeRelease = false
-      })
-    }
-    paneResize.onMouseUp(event)
-  }
+  const [layout, updateLayout] = useStorage().store<{
+    paneWidth?: number
+    terminalWidth?: number
+    resultsWidth?: number
+    resultsFolded?: boolean
+  }>("layout", { initial: {} })
   const [sessionWidth, setSessionWidth] = createSignal<number>()
   const [activePane, setActivePane] = createSignal<"session" | "right">("session")
   const [restoreTerminalFocus, setRestoreTerminalFocus] = createSignal(false)
@@ -94,12 +78,71 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
       }
     }),
   )
-  // DataForSEO Agent: the account, context and MCP panels moved into the chat sidebar on the left (app.tsx), so
-  // the right side holds only a panel or a terminal.
+  const charts = createMemo<ResultChart[]>(() =>
+    data.session.message
+      .list(props.sessionID)
+      .flatMap((message) => ("content" in message && Array.isArray(message.content) ? message.content : []))
+      .flatMap((part) =>
+        part.type === "tool" && part.name === "chart" && part.state.status === "completed"
+          ? [{ id: part.id, spec: (part.state.metadata?.spec ?? part.state.input) as unknown as ResultChart["spec"] }]
+          : [],
+      ),
+  )
   const rightPane = createMemo(() => {
     if (activePanel()) return "panel"
     if (selectedTerminal()) return "terminal"
+    if (
+      showResultsPane({
+        width: availableWidth(),
+        charts: charts().length,
+        folded: layout.resultsFolded ?? false,
+        terminal: false,
+        panel: false,
+      })
+    )
+      return "results"
   })
+  const results = createResultsState({
+    sessionID: () => props.sessionID,
+    charts,
+    visible: () => rightPane() === "results",
+  })
+  const defaultResultsWidth = () => Math.floor(availableWidth() * 0.45)
+  const foldResults = (folded: boolean) => {
+    void updateLayout((draft) => {
+      draft.resultsFolded = folded
+    }).catch((error) => console.error("Failed to persist TUI layout", error))
+  }
+  const paneResize = createPaneResize({
+    value: () =>
+      rightPane() === "results"
+        ? (layout.resultsWidth ?? defaultResultsWidth())
+        : (layout.paneWidth ?? layout.terminalWidth ?? defaultPaneWidth()),
+    defaultValue: () => (rightPane() === "results" ? defaultResultsWidth() : defaultPaneWidth()),
+    clamp: (width) =>
+      rightPane() === "results"
+        ? clampResultsPaneWidth(width, availableWidth())
+        : clampSessionPaneWidth(width, panels.width()),
+    fromMouse: (event) => dimensions().width - event.x - 1,
+    contains: (event, width) => event.x >= dimensions().width - width - 1 && event.x <= dimensions().width - width,
+    onCommit: (width) => {
+      const key = rightPane() === "results" ? "resultsWidth" : "paneWidth"
+      void updateLayout((draft) => {
+        draft[key] = width
+      }).catch((error) => console.error("Failed to persist TUI layout", error))
+    },
+  })
+  let resizeRelease = false
+  const finishPaneResize = (event: MouseEvent) => {
+    if (paneResize.resizing()) {
+      // A captured drag-end can be followed by mouse-up on the focus overlay.
+      resizeRelease = true
+      queueMicrotask(() => {
+        resizeRelease = false
+      })
+    }
+    paneResize.onMouseUp(event)
+  }
   const focusSession = () => {
     if (fullscreen()) return
     // Permission prompts replace the input, so returning focus must not depend on it.
@@ -155,6 +198,17 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
   Keymap.createLayer(() => ({
     mode: "global",
     commands: [
+      {
+        id: "results.toggle",
+        title: results.visible() ? "Hide results pane" : "Show results pane",
+        group: "Session",
+        palette: true,
+        slash: { name: "results" },
+        run: () => {
+          dialog.clear()
+          foldResults(results.visible())
+        },
+      },
       ...(sessions.available()
         ? [
             {
@@ -221,119 +275,128 @@ export function SessionFrame(props: { sessionID: string; verticalTabsWidth: numb
   }))
 
   return (
-    <box
-      flexGrow={1}
-      minWidth={0}
-      minHeight={0}
-      flexDirection="row"
-      position="relative"
-      onMouseDrag={paneResize.onMouseDrag}
-      onMouseDragEnd={finishPaneResize}
-      onMouseUp={finishPaneResize}
-    >
+    <ResultsProvider value={results}>
       <box
-        id="session-pane"
-        ref={(value: BoxRenderable) => (sessionNode = value)}
         flexGrow={1}
-        flexBasis={0}
         minWidth={0}
         minHeight={0}
-        position={fullscreen() ? "absolute" : "relative"}
-        visible={!fullscreen()}
-        width={fullscreen() ? Math.max(0, panels.width() - paneResize.size()) : undefined}
-        height="100%"
-        onSizeChange={function () {
-          setSessionWidth(this.width)
-        }}
+        flexDirection="row"
+        position="relative"
+        onMouseDrag={paneResize.onMouseDrag}
+        onMouseDragEnd={finishPaneResize}
+        onMouseUp={finishPaneResize}
       >
-        <InteractivityProvider enabled={activePane() === "session" && !fullscreen()}>
-          <Session
-            scrollRef={(value) => (sessionScroll = value)}
-            verticalTabsWidth={props.verticalTabsWidth}
-            promptMuted={activePane() !== "session"}
-            terminals={sessions.available()}
-            visibleTerminalID={rightPane() === "terminal" ? selectedTerminal()?.id : undefined}
-            onTerminalPicker={(show) => (showTerminals = show)}
-            width={sessionWidth()}
-          />
-        </InteractivityProvider>
-        <Show when={activePane() === "right"}>
-          <box
-            position="absolute"
-            left={0}
-            top={0}
-            width="100%"
-            height="100%"
-            zIndex={1}
-            onMouseScroll={(event) => {
-              if (!sessionScroll || sessionScroll.isDestroyed) return
-              const viewport = sessionScroll.viewport
-              if (event.x < viewport.x || event.x >= viewport.x + viewport.width) return
-              if (event.y < viewport.y || event.y >= viewport.y + viewport.height) return
-              // Keep the focus-only click guard, but let the transcript handle its own wheel events.
-              event.stopPropagation()
-              sessionScroll.processMouseEvent(new MouseEvent(sessionScroll, event))
-            }}
-            // Consume the release before revealing permission buttons underneath.
-            onMouseUp={() => {
-              if (paneResize.resizing() || resizeRelease) return
-              focusSession()
-            }}
-          />
-        </Show>
-      </box>
-      <Show when={rightPane() === "terminal" || rightPane() === "panel"}>
         <box
-          ref={(value: BoxRenderable) => (rightNode = value)}
-          flexShrink={0}
-          width={fullscreen() ? availableWidth() : paneResize.size()}
+          id="session-pane"
+          ref={(value: BoxRenderable) => (sessionNode = value)}
+          flexGrow={1}
+          flexBasis={0}
           minWidth={0}
           minHeight={0}
+          position={fullscreen() ? "absolute" : "relative"}
+          visible={!fullscreen()}
+          width={fullscreen() ? Math.max(0, panels.width() - paneResize.size()) : undefined}
+          height="100%"
+          onSizeChange={function () {
+            setSessionWidth(this.width)
+          }}
         >
-          <Show
-            keyed
-            when={activePanel()}
-            fallback={
-              <Show keyed when={selectedTerminal()?.id}>
-                {(ptyID) => (
-                  <TerminalPane
-                    ptyID={ptyID}
-                    resizing={paneResize.resizing()}
-                    autoFocus={restoreTerminalFocus() || sessions.shouldFocus(ptyID)}
-                    onAutoFocus={() => {
-                      sessions.clearFocus(ptyID)
-                      setRestoreTerminalFocus(false)
-                    }}
-                    onFocusRequest={(value) => (focusTerminal = value)}
-                    onDisconnect={() => setRestoreTerminalFocus(true)}
-                  />
-                )}
-              </Show>
-            }
-          >
-            {(item) => (
-              <PanelHost
-                panel={item}
-                width={fullscreen() ? availableWidth() : paneResize.size()}
-                focused={activePane() === "right"}
-                onFocus={focusRightPane}
-                onTarget={(node) => {
-                  panelNode = node
-                  if (node) {
-                    focusRightPane()
-                    return
-                  }
-                  setActivePane("session")
-                }}
-              />
-            )}
+          <InteractivityProvider enabled={activePane() === "session" && !fullscreen()}>
+            <Session
+              scrollRef={(value) => (sessionScroll = value)}
+              verticalTabsWidth={props.verticalTabsWidth}
+              promptMuted={activePane() !== "session"}
+              terminals={sessions.available()}
+              visibleTerminalID={rightPane() === "terminal" ? selectedTerminal()?.id : undefined}
+              onTerminalPicker={(show) => (showTerminals = show)}
+              width={sessionWidth()}
+            />
+          </InteractivityProvider>
+          <Show when={activePane() === "right"}>
+            <box
+              position="absolute"
+              left={0}
+              top={0}
+              width="100%"
+              height="100%"
+              zIndex={1}
+              onMouseScroll={(event) => {
+                if (!sessionScroll || sessionScroll.isDestroyed) return
+                const viewport = sessionScroll.viewport
+                if (event.x < viewport.x || event.x >= viewport.x + viewport.width) return
+                if (event.y < viewport.y || event.y >= viewport.y + viewport.height) return
+                // Keep the focus-only click guard, but let the transcript handle its own wheel events.
+                event.stopPropagation()
+                sessionScroll.processMouseEvent(new MouseEvent(sessionScroll, event))
+              }}
+              // Consume the release before revealing permission buttons underneath.
+              onMouseUp={() => {
+                if (paneResize.resizing() || resizeRelease) return
+                focusSession()
+              }}
+            />
           </Show>
         </box>
-      </Show>
-      <Show when={!fullscreen() && (rightPane() === "terminal" || rightPane() === "panel") && availableWidth() >= 3}>
-        <PaneResizeHandle resize={paneResize} left={availableWidth() - paneResize.size() - 1} highlight="right" />
-      </Show>
-    </box>
+        <Show when={rightPane()}>
+          <box
+            ref={(value: BoxRenderable) => (rightNode = value)}
+            flexShrink={0}
+            width={fullscreen() ? availableWidth() : paneResize.size()}
+            minWidth={0}
+            minHeight={0}
+          >
+            <Show
+              when={rightPane() === "results"}
+              fallback={
+                <Show
+                  keyed
+                  when={activePanel()}
+                  fallback={
+                    <Show keyed when={selectedTerminal()?.id}>
+                      {(ptyID) => (
+                        <TerminalPane
+                          ptyID={ptyID}
+                          resizing={paneResize.resizing()}
+                          autoFocus={restoreTerminalFocus() || sessions.shouldFocus(ptyID)}
+                          onAutoFocus={() => {
+                            sessions.clearFocus(ptyID)
+                            setRestoreTerminalFocus(false)
+                          }}
+                          onFocusRequest={(value) => (focusTerminal = value)}
+                          onDisconnect={() => setRestoreTerminalFocus(true)}
+                        />
+                      )}
+                    </Show>
+                  }
+                >
+                  {(item) => (
+                    <PanelHost
+                      panel={item}
+                      width={fullscreen() ? availableWidth() : paneResize.size()}
+                      focused={activePane() === "right"}
+                      onFocus={focusRightPane}
+                      onTarget={(node) => {
+                        panelNode = node
+                        if (node) {
+                          focusRightPane()
+                          return
+                        }
+                        setActivePane("session")
+                      }}
+                    />
+                  )}
+                </Show>
+              }
+            >
+              <ResultsPane width={paneResize.size()} onFold={() => foldResults(true)} />
+            </Show>
+          </box>
+        </Show>
+        <Show when={!fullscreen() && rightPane() !== undefined && availableWidth() >= 3}>
+          <PaneResizeHandle resize={paneResize} left={availableWidth() - paneResize.size() - 1} highlight="right" />
+        </Show>
+      </box>
+    </ResultsProvider>
   )
 }
 

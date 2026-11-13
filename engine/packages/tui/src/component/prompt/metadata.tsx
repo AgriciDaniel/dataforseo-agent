@@ -1,11 +1,13 @@
-import { RGBA, TextAttributes } from "@opentui/core"
+import { RGBA, TextAttributes, type BoxRenderable } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/solid"
-import { createMemo, Show } from "solid-js"
+import { createMemo, createSignal, Show } from "solid-js"
 import { useTheme } from "../../context/theme"
+import { AccountReadout } from "../../feature-plugins/sidebar/account-readout"
 import { Locale } from "../../util/locale"
 import { stringWidth } from "../../util/string-width"
 
 export function PromptMetadataRow(props: {
+  sessionID?: string
   mode: "normal" | "shell"
   agent?: string
   auto: boolean
@@ -23,6 +25,7 @@ export function PromptMetadataRow(props: {
 }) {
   const theme = useTheme()
   const dimensions = useTerminalDimensions()
+  const [width, setWidth] = createSignal(0)
   const layout = createMemo(() => {
     if (props.mode === "shell") return { agent: props.agent ?? "Shell", model: "" }
     return promptMetadataLayout({
@@ -37,58 +40,84 @@ export function PromptMetadataRow(props: {
   })
 
   return (
-    <box flexDirection="row" gap={1} flexGrow={1} flexShrink={1} minWidth={0}>
-      <Show
-        when={(props.mode === "shell" || props.agent) && (layout().agent || layout().model)}
-        fallback={<box height={1} />}
-      >
-        <Show when={layout().agent}>
-          {(agent) => (
-            <text id="prompt-meta-agent" fg={fade(props.highlight, props.agentAlpha)} onMouseUp={() => props.onAgent?.()}>
-              {agent()}
-            </text>
-          )}
-        </Show>
-        <Show when={props.mode === "normal" && layout().auto}>
-          <text fg={fade(theme.text.muted, props.agentAlpha)}>auto</text>
-        </Show>
-        <Show when={props.mode === "normal" && layout().model}>
-          <box id="prompt-meta-model" flexDirection="row" gap={1} flexGrow={1} flexShrink={1} minWidth={0} onMouseUp={() => props.onModel?.()}>
-            <Show when={layout().agent}>
-              <text fg={fade(theme.text.muted, props.modelAlpha)}>·</text>
-            </Show>
-            <text
+    <box
+      flexDirection={width() >= 76 ? "row" : "column"}
+      gap={width() >= 76 ? 1 : 0}
+      flexGrow={1}
+      flexShrink={1}
+      minWidth={0}
+      onSizeChange={function (this: BoxRenderable) {
+        setWidth(this.width)
+      }}
+    >
+      <box flexDirection="row" gap={1} flexGrow={1} flexShrink={1} minWidth={0}>
+        <Show
+          when={(props.mode === "shell" || props.agent) && (layout().agent || layout().model)}
+          fallback={<box height={1} />}
+        >
+          <Show when={layout().agent}>
+            {(agent) => (
+              <text
+                id="prompt-meta-agent"
+                fg={fade(props.highlight, props.agentAlpha)}
+                onMouseUp={() => props.onAgent?.()}
+              >
+                {agent()}
+              </text>
+            )}
+          </Show>
+          <Show when={props.mode === "normal" && layout().auto}>
+            <text fg={fade(theme.text.muted, props.agentAlpha)}>auto</text>
+          </Show>
+          <Show when={props.mode === "normal" && layout().model}>
+            <box
+              id="prompt-meta-model"
+              flexDirection="row"
+              gap={1}
+              flexGrow={1}
               flexShrink={1}
               minWidth={0}
-              wrapMode="none"
-              truncate
-              fg={fade(props.muted ? theme.text.muted : theme.text.base, props.modelAlpha)}
+              onMouseUp={() => props.onModel?.()}
             >
-              {layout().model}
-            </text>
-            <Show when={layout().provider}>
-              {(provider) => (
-                <text flexShrink={0} fg={fade(theme.text.muted, props.modelAlpha)}>
-                  {provider()}
-                </text>
-              )}
-            </Show>
-
-            <Show when={layout().variant}>
-              {(variant) => (
-                <>
-                  <text fg={fade(theme.text.muted, props.variantAlpha)}>·</text>
-                  <text
-                    fg={fade(theme.text.feedback.warning.base, props.variantAlpha)}
-                    attributes={TextAttributes.BOLD}
-                  >
-                    {variant()}
+              <Show when={layout().agent}>
+                <text fg={fade(theme.text.muted, props.modelAlpha)}>·</text>
+              </Show>
+              <text
+                flexShrink={1}
+                minWidth={0}
+                wrapMode="none"
+                truncate
+                fg={fade(props.muted ? theme.text.muted : theme.text.base, props.modelAlpha)}
+              >
+                {layout().model}
+              </text>
+              <Show when={layout().provider}>
+                {(provider) => (
+                  <text flexShrink={0} fg={fade(theme.text.muted, props.modelAlpha)}>
+                    {provider()}
                   </text>
-                </>
-              )}
-            </Show>
-          </box>
+                )}
+              </Show>
+
+              <Show when={layout().variant}>
+                {(variant) => (
+                  <>
+                    <text fg={fade(theme.text.muted, props.variantAlpha)}>·</text>
+                    <text
+                      fg={fade(theme.text.feedback.warning.base, props.variantAlpha)}
+                      attributes={TextAttributes.BOLD}
+                    >
+                      {variant()}
+                    </text>
+                  </>
+                )}
+              </Show>
+            </box>
+          </Show>
         </Show>
+      </box>
+      <Show when={props.sessionID} keyed>
+        {(sessionID) => <AccountReadout sessionID={sessionID} />}
       </Show>
     </box>
   )

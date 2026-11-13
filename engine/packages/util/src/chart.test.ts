@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { ChartTypes, asTable, niceAxis, render, sortTable, toCsv, toText, validate, type Spec } from "./chart.js"
+import { ChartTypes, PLOT_WIDTH, asTable, niceAxis, render, sortTable, toCsv, toText, validate, type Spec } from "./chart.js"
 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 const specs: Record<string, Spec> = {
@@ -134,7 +134,7 @@ describe("readable axes and ranks", () => {
   test("line axes use round numbers", () => {
     const text = toText(render({ type: "line", x: ["a", "b", "c", "d"], series: [{ name: "v", values: [32000, 41000, 47000, 58000] }] }, 60))
     const labels = text.split("\n").filter((l) => l.includes("┤")).map((l) => l.split("┤")[0].trim()).filter(Boolean)
-    expect(labels).toEqual(["60k", "50k", "30k"])
+    expect(labels).toEqual(["60k", "50k", "40k", "30k"])
   })
   test("niceAxis rounds to 1, 2, 2.5 or 5 steps", () => {
     expect(niceAxis(32000, 58000)).toEqual({ lo: 30000, hi: 60000, mid: 50000, step: 10000 })
@@ -164,7 +164,7 @@ describe("readable axes and ranks", () => {
 describe("distribution, overlap, gauge and donut", () => {
   test("a rank distribution colors each bucket on its own grade, best first", () => {
     const lines = render({ type: "distribution", x: ["#1", "#2-3", "#4-10", "#11-20", "#21-50", "#51-100"], series: [{ name: "you", values: [1, 2, 3, 4, 5, 6] }] }, 60)
-    const roles = lines.flat().filter((s) => s.text.includes("█")).map((s) => s.role)
+    const roles = lines.flat().filter((s) => s.text.includes("█") || s.bg?.toString().startsWith("grade")).map((s) => s.bg ?? s.role)
     expect(new Set(roles).size).toBe(6)
     expect(roles[0]).toBe("grade6")
     expect(roles.at(-1)).toBe("grade0")
@@ -199,5 +199,205 @@ describe("distribution, overlap, gauge and donut", () => {
   test("a donut falls back to the share bar in the terminal", () => {
     const text = toText(render({ type: "donut", x: ["a", "b"], series: [{ name: "k", values: [3, 1] }] }, 60))
     expect(text).toContain("75%")
+  })
+})
+
+describe("composed chart layout", () => {
+  for (const [type, spec] of Object.entries(specs)) {
+    test(`${type} has clean lines and consistent metadata at 60 and 100 columns`, () => {
+      for (const width of [60, 100]) {
+        const lines = render({ ...spec, title: "Title", subtitle: "Subtitle", source: "Source" }, width)
+        const text = lines.map((line) => line.map((s) => s.text).join(""))
+        expect(text.slice(0, 3)).toEqual(["Title", "Subtitle", ""])
+        expect(text.slice(-2)).toEqual(["", "Source"])
+        expect(lines.at(-1)?.[0].role).toBe("muted")
+        expect(text.some((line, i) => !line && text[i + 1] === "")).toBe(false)
+        for (const line of text) {
+          expect(line).toBe(line.trimEnd())
+          expect([...line].length).toBeLessThanOrEqual(type === "table" ? width : Math.min(width, PLOT_WIDTH))
+        }
+      }
+    })
+  }
+
+  test("inline plots cap at 78 columns and full screen can grow", () => {
+    for (const type of ["hbar", "share-bar", "line"] as const)
+      expect(render(specs[type], 200)).toEqual(render(specs[type], PLOT_WIDTH))
+    expect(render(specs["share-bar"], 120, { full: true })[0].reduce((n, s) => n + s.text.length, 0)).toBe(120)
+    const table: Spec = { type: "table", x: ["a".repeat(45)], series: [{ name: "Details", values: ["b".repeat(45)] }] }
+    expect(Math.max(...render(table, 100).map((line) => line.reduce((n, s) => n + s.text.length, 0)))).toBeGreaterThan(
+      PLOT_WIDTH,
+    )
+  })
+
+  test("heatmap fits full headers and fills readable cells", () => {
+    const spec: Spec = {
+      type: "heatmap",
+      rows: ["Search", "Maps"],
+      cols: ["Desktop", "Mobile", "Tablet"],
+      values: [
+        [30, 20, 10],
+        [5, 15, null],
+      ],
+    }
+    for (const width of [60, 100]) {
+      const lines = render(spec, width)
+      for (const header of spec.cols!) expect(toText(lines)).toContain(header)
+      const cells = lines.flat().filter((s) => s.bg)
+      expect(cells).toHaveLength(5)
+      expect(cells.every((s) => s.role === "tile" && s.tip && s.text.length >= 6)).toBe(true)
+    }
+  })
+
+  test("line labels every nice tick on equally spaced rows", () => {
+    const text = toText(
+      render(
+        { type: "line", x: months, series: [{ name: "v", values: [20, 25, 30, 40, 50, 60, 65, 70, 75, 76, 78, 80] }] },
+        100,
+      ),
+    ).split("\n")
+    const ticks = text.flatMap((line, row) =>
+      /^\s*(\d+) ┤/.test(line) ? [{ value: Number(line.split("┤")[0].trim()), row }] : [],
+    )
+    expect(ticks.map((t) => t.value)).toEqual([80, 60, 40, 20])
+    expect(ticks.slice(1).map((t, i) => t.row - ticks[i].row)).toEqual([3, 3, 3])
+    expect(text.find((line) => line.includes("└"))!.length).toBeLessThan(70)
+  })
+
+  test("missing line values preserve the shared no-data layout", () => {
+    expect(toText(render({ type: "line", x: ["a", "b", "c"], series: [{ name: "v", values: [null, null, null] }], source: "Source" }, 60))).toBe("No data\n\nSource")
+  })
+
+  test("scatter labels every log decade and puts axis titles before the plot", () => {
+    const text = toText(
+      render(
+        {
+          type: "scatter",
+          x_label: "KD",
+          y_label: "Volume",
+          series: [
+            {
+              name: "Keywords",
+              values: [
+                [10, 100],
+                [50, 1000],
+                [90, 100000],
+              ],
+            },
+          ],
+        },
+        100,
+      ),
+    )
+    expect(
+      text
+        .split("\n")
+        .filter((line) => /\S+ ┤/.test(line))
+        .map((line) => line.split("┤")[0].trim()),
+    ).toEqual(["100k", "10k", "1,000", "100"])
+    expect(text.indexOf("↑ Volume (log)")).toBeLessThan(text.indexOf("┤"))
+    expect(text).toContain("KD →")
+    expect(text).not.toMatch(/^[xy]:/m)
+  })
+
+  test("share bar draws one strip with counts and shares in its legend", () => {
+    const lines = render(specs["share-bar"], 100)
+    expect(lines.filter((line) => line.some((s) => s.text.includes("█")))).toHaveLength(1)
+    expect(toText(lines)).toMatch(/organic\s+80%\s+8/)
+    expect(toText(lines)).toMatch(/paa\s+10%\s+1/)
+    expect(
+      toText(render({ ...specs["share-bar"], series: [{ name: "n", values: [0, 0, 0] }], source: "Source" })),
+    ).toContain("No data\n\nSource")
+  })
+
+  test("distribution explicitly normalizes and aligns bucket counts", () => {
+    const spec: Spec = {
+      type: "distribution",
+      x: ["Top 3", "Top 10", "Other"],
+      series: [
+        { name: "you.com", values: [12, 6, 2] },
+        { name: "rival.com", values: [60, 30, 10] },
+      ],
+    }
+    const lines = render(spec, 100)
+    const text = toText(lines)
+    expect(text.match(/100% ·/g)).toHaveLength(2)
+    expect(text).toContain("60%")
+    expect(text).toMatch(/Counts\s+you.com\s+rival.com/)
+    expect(text).toMatch(/Top 3\s+12\s+60/)
+    const rows = text.split("\n").filter((line) => /^■ /.test(line))
+    expect(new Set(rows.map((line) => line.length)).size).toBe(1)
+    expect(text).not.toContain(" / ")
+    const zero = render({ ...spec, series: [{ name: "Empty", values: [0, 0, 0] }] }, 60)
+    expect(toText(zero)).toContain("no data")
+    expect(zero.flat().some((s) => s.bg)).toBe(false)
+  })
+
+  test("diverging sides share a scale and fill the available width", () => {
+    const spec: Spec = {
+      type: "diverging-bar",
+      x: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+      series: [
+        { name: "New", values: [10, 20, 30, 10, 20, 30, 10, 20, 30, 10, 20, 30] },
+        { name: "Lost", values: [-10, -20, -30, -10, -20, -30, -10, -20, -30, -10, -20, -30] },
+      ],
+    }
+    // A few dates stay as columns of at most 9 cells instead of stretching into slabs.
+    const few = toText(render({ ...spec, x: spec.x!.slice(0, 3), series: spec.series!.map((s) => ({ ...s, values: s.values.slice(0, 3) })) }, 100))
+    expect(few.split("\n").find((line) => line.includes("┼"))!.length).toBeLessThanOrEqual(3 * 9 + 6)
+    for (const width of [60, 100]) {
+      const lines = render(spec, width)
+      expect(
+        toText(lines)
+          .split("\n")
+          .find((line) => line.includes("┼"))!.length,
+      ).toBeGreaterThan(Math.min(width, PLOT_WIDTH) - 3)
+      const size = (role: string) =>
+        lines
+          .flat()
+          .filter((s) => s.role === role && /^[█▁▂▃▄▅▆▇▔▀ ]+$/.test(s.text))
+          .reduce((n, s) => n + s.text.replace(/ /g, "").length, 0)
+      expect(size("good")).toBe(size("bad"))
+      expect(toText(render(specs["diverging-bar"], width)).split("\n").find((line) => line.includes("┼"))!.length).toBe(Math.min(width, PLOT_WIDTH))
+    }
+  })
+
+  test("KPI cards wrap, emphasize values and respect lower is better", () => {
+    const spec: Spec = {
+      type: "kpi",
+      series: [
+        { name: "Keywords", values: [48700, 41100] },
+        { name: "Lost", values: [5, 10], lower_is_better: true },
+        { name: "Cost", values: [20, 10], lower_is_better: true },
+        { name: "Flat", values: [0, 0] },
+      ],
+    }
+    const wide = render(spec, 100)
+    const narrow = render(spec, 40)
+    expect(toText(wide)).toContain("was 41.1k")
+    expect(wide.flat().find((s) => s.text.includes("48.7k"))?.bold).toBe(true)
+    expect(wide.flat().find((s) => s.text.includes("▼ 50.0%"))?.role).toBe("good")
+    expect(wide.flat().find((s) => s.text.includes("▲ 100.0%"))?.role).toBe("bad")
+    expect(toText(wide)).toContain("no change")
+    expect(narrow.length).toBeGreaterThan(wide.length)
+    expect(toText(narrow).match(/┌/g)).toHaveLength(4)
+  })
+
+  test("each grouped bar names its series with deliberate category spacing", () => {
+    const lines = render(
+      {
+        ...specs["grouped-bar"],
+        series: [
+          { name: "You", values: [1, 2, 3] },
+          { name: "Rival", values: [3, 2, 1] },
+        ],
+      },
+      60,
+    )
+    const bars = lines.filter((line) => line.some((s) => s.text.includes("█")))
+    expect(bars).toHaveLength(6)
+    bars.forEach((line, i) => expect(line.map((s) => s.text).join("")).toContain(i % 2 ? "Rival" : "You"))
+    expect(toText(lines)).not.toMatch(/^\s+│$/m)
+    expect(lines.filter((line) => !line.length)).toHaveLength(2)
   })
 })
