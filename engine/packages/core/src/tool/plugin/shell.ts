@@ -10,6 +10,7 @@ import { Environment } from "../../environment/index.js"
 import { Job } from "../../job.js"
 import { FileAccess } from "../../file-access.js"
 import { Permission } from "../../permission.js"
+import { PAID_API_SHELL_REFUSAL, reachesPaidApi } from "@dataforseo-agent/util/dataforseo"
 import { NonNegativeInt } from "../../schema.js"
 import { Session } from "../../session.js"
 import { SessionSchema } from "../../session/schema.js"
@@ -112,6 +113,8 @@ export const Plugin = {
     const permission = yield* Permission.Service
 
     const prepare = Effect.fn("ShellTool.prepare")(function* (invocation: ShellCreateBefore, context: Tool.Context) {
+      // Paid calls go through the request tool only: a direct call would skip the price prompt and the ledger.
+      if (reachesPaidApi(invocation.command)) return yield* Effect.fail(new Error(PAID_API_SHELL_REFUSAL))
       const target = yield* access.resolve({ path: invocation.cwd, kind: "directory" })
       invocation.cwd = target.absolute
       const timeout = invocation.timeout

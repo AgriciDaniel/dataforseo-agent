@@ -285,6 +285,8 @@ There is no telemetry and no automatic update. Usage data is exported only if yo
 
 MIT, see [LICENSE](LICENSE).
 
+The engine is a fork of [opencode](https://github.com/sst/opencode), an open source terminal agent, also MIT licensed. Thank you to its authors.
+
 DataForSEO is a trademark of its owner. This is an independent project that uses the public DataForSEO API.
 
 Built by **[Agrici Daniel](https://agricidaniel.com/about)**, AI Workflow Architect, with help from the [AI Marketing Hub Pro](https://www.skool.com/ai-marketing-hub-pro) community. The three bots are from my GitHub profile.

@@ -7,6 +7,12 @@ All notable changes to DataForSEO Agent. Versions follow `tools/VERSION`.
 ### Changed
 - Sidebar mark drawn in sextants (two text rows); Homies use the kit sprite at kit-like heights.
 - README: a "See it running" section with real screenshots.
+- README: the home screenshot is the hero; the engine's upstream project is credited.
+
+### Security
+- The shell tool refuses commands that call `api.dataforseo.com` directly, so a paid call cannot skip
+  the price prompt and the spend record.
+- Patched `hono`, `@hono/node-server` and `fast-uri`; the CI token is read-only.
 
 ## 0.2.0 (2026-11-13)
 

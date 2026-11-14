@@ -15,6 +15,7 @@ import { Config } from "@dataforseo-agent/core/config"
 import { Environment } from "@dataforseo-agent/core/environment/index"
 import { FSUtil } from "@dataforseo-agent/util/fs-util"
 import { Global } from "@dataforseo-agent/util/global"
+import { PAID_API_SHELL_REFUSAL } from "@dataforseo-agent/util/dataforseo"
 import { Location } from "@dataforseo-agent/core/location"
 import { FileAccess } from "@dataforseo-agent/core/file-access"
 import { LocationServiceMap } from "@dataforseo-agent/core/location-service-map"
@@ -973,6 +974,28 @@ describe("ShellTool", () => {
               },
             }),
           ),
+        ),
+      )
+    }),
+  )
+
+  it.live("refuses a direct call to the paid DataForSEO API before asking for approval", () =>
+    withTempDir((tmp) => {
+      reset()
+      return withSession(tmp.path, (registry) =>
+        executeTool(
+          registry,
+          call({ command: "curl -s https://api.dataforseo.com/v3/serp/google/organic/live/advanced -d @body.json" }),
+        ),
+      ).pipe(
+        Effect.andThen((settled) =>
+          Effect.sync(() => {
+            expect(settled).toEqual({
+              status: "error",
+              error: { type: "unknown", message: PAID_API_SHELL_REFUSAL },
+            })
+            expect(assertions).toHaveLength(0)
+          }),
         ),
       )
     }),

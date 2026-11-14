@@ -85,6 +85,18 @@ export function requestTarget(input: Record<string, unknown>) {
   }
 }
 
+/** Shown when a shell command tries to reach the live API directly. */
+export const PAID_API_SHELL_REFUSAL =
+  "Not run: this command calls api.dataforseo.com directly, which skips the price prompt and the spend record. Send the request with the DataForSEO request tool instead."
+
+/**
+ * True when shell text names the live DataForSEO API host. Only the request tool may call it, because that
+ * is where the price is shown and the spend is recorded. The free sandbox host is not matched.
+ */
+export function reachesPaidApi(command: string) {
+  return /(^|[^A-Za-z0-9.-])api\.dataforseo\.com(?![A-Za-z0-9-])/i.test(command)
+}
+
 /** Billed USD for one DataForSEO response: the top-level `cost`, else the sum of `tasks[].cost`. */
 export function reportedCost(response: unknown): number | undefined {
   if (!response || typeof response !== "object") return undefined

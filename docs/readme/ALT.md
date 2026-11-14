@@ -1,9 +1,5 @@
 # Alt text for the README scenes
 
-## hero.svg
-
-DataForSEO Agent hero animation: three pixel bots walk into a terminal where someone types Top 10 Google results for best crm in the US. The agent routes the question to the DataForSEO SERP API, shows the price first with Run it for $0.002?, a bot presses YES, and a ranked top 10 SERP bar chart grows. SEO data, priced before you pay.
-
 ## install.svg
 
 Install DataForSEO Agent in three commands: tools/install.sh, dataforseo-agent-setup to connect your DataForSEO API account, set a session budget and market and pick any AI model, then dataforseo to start. Press start: the three bots boot up while the counters fill to 14 SEO agents and 33 SEO workflow skills.

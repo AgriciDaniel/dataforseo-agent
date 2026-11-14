@@ -10,6 +10,7 @@ import {
   requestPath,
   requestShape,
   requestTarget,
+  reachesPaidApi,
 } from "./dataforseo.js"
 
 describe("requestPath", () => {
@@ -143,5 +144,20 @@ describe("requestTarget", () => {
     expect(requestTarget({ url: "http://api.dataforseo.com/v3/appendix/user_data" })).toBeUndefined()
     expect(requestTarget({ url: "https://api.dataforseo.com/v3/appendix/user_data?x=1" })).toBeUndefined()
     expect(requestTarget({ url: 42 })).toBeUndefined()
+  })
+})
+
+describe("reachesPaidApi", () => {
+  test("catches direct calls to the live API from the shell", () => {
+    expect(reachesPaidApi(`curl -u "$L:$P" https://api.dataforseo.com/v3/serp/google/organic/live/advanced -d @body.json`)).toBe(true)
+    expect(reachesPaidApi("wget -qO- HTTPS://API.DataForSEO.com/v3/appendix/user_data")).toBe(true)
+    expect(reachesPaidApi("python -c \"import requests; requests.post('https://api.dataforseo.com/v3/x')\"")).toBe(true)
+  })
+
+  test("leaves the sandbox, the docs and unrelated hosts alone", () => {
+    expect(reachesPaidApi("curl https://sandbox.dataforseo.com/v3/serp/google/organic/live/advanced")).toBe(false)
+    expect(reachesPaidApi("curl https://docs.dataforseo.com/v3/")).toBe(false)
+    expect(reachesPaidApi("curl https://myapi.dataforseo.com.example.org/")).toBe(false)
+    expect(reachesPaidApi("ls -la && echo dataforseo")).toBe(false)
   })
 })
