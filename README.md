@@ -126,6 +126,8 @@ Session spend is written to disk, so restarting the app does not refill the budg
 
 The session budget is enforced by the app itself, not just by the agent's instructions. It adds up the billed cost of each call in the session and its sub-agents (or the catalog price when a response leaves the cost out). As a backstop it also watches your account balance, so anything else billed while the session is open counts too. Free calls, such as fetching a result you already paid for, are never blocked. The sidebar shows your balance, today's spend against the daily limit, and this session's spend against the budget.
 
+**Known limit:** the agent also has a shell tool. It refuses any command that names `api.dataforseo.com`, so a paid call cannot skip the price prompt that way, but the check reads the command text. A script that builds the address in pieces would get past it. The balance backstop still counts that spend against the session budget.
+
 <details>
 <summary><b>Settings</b></summary>
 

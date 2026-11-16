@@ -2,17 +2,20 @@
 
 All notable changes to DataForSEO Agent. Versions follow `tools/VERSION`.
 
-## Unreleased
+## 0.2.1 (2026-11-16)
 
 ### Changed
 - Sidebar mark drawn in sextants (two text rows); Homies use the kit sprite at kit-like heights.
 - README: a "See it running" section with real screenshots.
 - README: the home screenshot is the hero; the engine's upstream project is credited.
+- README: the network list is complete (npm registry, GitHub syntax files, web fetch and search on
+  demand) and the shell guard's limit is stated.
 
 ### Security
 - The shell tool refuses commands that call `api.dataforseo.com` directly, so a paid call cannot skip
   the price prompt and the spend record.
 - Patched `hono`, `@hono/node-server` and `fast-uri`; the CI token is read-only.
+- `glob` 14.0.2 and `minimatch` 11.0.1, which fix two advisories in the direct dependencies.
 
 ## 0.2.0 (2026-11-13)
 
