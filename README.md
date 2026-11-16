@@ -39,6 +39,11 @@ Claude, ChatGPT, Gemini and 75+ AI model providers.
 
 ## See it running
 
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=FtuQkcnrw2w"><img src="docs/screenshots/video.jpg" width="720" alt="Watch the DataForSEO Agent demo on YouTube: keyword research, Google Maps and a geogrid, an AI Overview check and competitor research, with the price of each run" /></a><br />
+  <b><a href="https://www.youtube.com/watch?v=FtuQkcnrw2w">Watch the full demo on YouTube</a></b> (28 min): keyword research, Google Maps with a geogrid, an AI Overview check and competitor research.
+</p>
+
 Real screenshots from one sitting, about 10 cents of DataForSEO credit in total.
 
 **It asks before it spends.** The plan, the estimate, then a prompt with the list price and the exact endpoint. Nothing is sent until you accept.
