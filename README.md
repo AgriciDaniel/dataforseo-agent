@@ -273,11 +273,15 @@ The catalog is built from DataForSEO's official OpenAPI spec and pricing pages, 
 
 ## Privacy and network
 
-The app talks to three kinds of servers, and only these:
+In normal use the app talks to these servers:
 
 - **DataForSEO**, with your API login, for the calls you approve and for the free account and catalog checks.
 - **Your AI model provider**, with your chat, as with any AI tool. Which one is your choice at setup.
 - **models.dev**, to refresh the public list of models and prices. Nothing about you or your chats is sent.
+- **The npm registry**, to download the official DataForSEO MCP server (`dataforseo-mcp-server`) that makes the API calls.
+- **GitHub**, to download syntax highlighting files the first time a code block in a given language is shown.
+
+It reaches other servers only when the work calls for it: a web page the agent fetches, a web search provider if the agent searches the web, and any plugin or extra MCP server you add yourself.
 
 There is no telemetry and no automatic update. Usage data is exported only if you set the standard `OTEL_EXPORTER_OTLP_ENDPOINT` variable yourself. Your DataForSEO password is stored in `~/.config/dataforseo-agent/credentials.env`, readable only by you, and never goes through a model.
 

@@ -35,5 +35,5 @@ How notes in this brain are written. Applies to every file under `wiki/`.
 - Endpoint paths, parameters and prices live in the catalog, not in notes. Judgement lives in one note and is linked from others.
 
 ## Publish and release
-- This brain ships inside the DataForSEO Agent, not as a public site. What may be published is defined in `PUBLISHING_NOTICE.md`: `.raw/`, the claim ledger and source evidence stay private.
+- This brain ships inside the DataForSEO Agent, not as a public site. What may be published is defined in `PUBLISHING_NOTICE.md`: captured `.raw/` material and unreviewed source evidence stay private.
 - No dashes (em or en) in any note.
